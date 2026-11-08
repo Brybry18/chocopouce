@@ -226,6 +226,7 @@ const SONS = {
     [523, 659, 784, 1046, 1318].forEach((f, i) => bip('square', f, f, 0.14, 0.18, i * 0.08));
     bip('square', 1568, 1568, 0.7, 0.16, 0.42); bip('triangle', 784, 784, 0.9, 0.35, 0.42); bruit(0.5, 0.3, 3000, 8000, 0.42);
   },
+  monde() { [392, 523, 659, 784].forEach((f, i) => bip('square', f, f, 0.16, 0.14, i * 0.14)); bip('square', 1046, 1046, 0.5, 0.14, 0.56); bip('triangle', 131, 131, 0.9, 0.3, 0.56); },
   gameover() { [392, 370, 349, 330].forEach((f, i) => bip('square', f, f * 0.98, 0.32, 0.16, i * 0.34)); bip('triangle', 165, 82, 1.2, 0.35, 1.36); },
 };
 const son = (n) => { if (actx && actx.state === 'running') SONS[n](); };
@@ -234,7 +235,7 @@ const son = (n) => { if (actx && actx.state === 'running') SONS[n](); };
 // Sans fichier, une petite boucle chiptune joue à sa place.
 const SOURCES_GENERIQUE = ['generique.aac', 'generique.mp3', 'generique.m4a'];
 const generique = new Audio();
-generique.loop = true;
+generique.loop = false; // à la fin de la chanson : l'écran d'accueil, puis le clip recommence
 generique.preload = 'auto';
 let generiqueOK = false, sourceGenerique = 0;
 generique.addEventListener('canplay', () => { generiqueOK = true; });
@@ -354,7 +355,7 @@ const PAL = {
   cape: '#e02838', capeOmbre: '#901428', casque: '#c8d0e8', casqueOmbre: '#7880a8',
   ceinture: '#7a4a1c', jaune: '#f8e040', choco: '#5a2808', chocoClair: '#a8642c', chaussure: '#5a3018', oeil: '#201828', bouche: '#8a2828',
 };
-const LETTRES_CP = { C: [15, 16, 16, 16, 15], P: [30, 17, 30, 16, 16] }; // 5 × 5
+const LETTRES_CP = { C: [15, 16, 16, 16, 15], P: [28, 18, 28, 16, 16] }; // 5 × 5
 // En civil (le début du clip) : veste marron, chemise blanche, jean ; ni cape, ni casque, ni « CP ».
 const PAL_COSTUME = PAL;
 const PAL_CIVIL = { ...PAL, costume: '#8a6446', costumeOmbre: '#5e422c', costumeClair: '#a8825e', jambe: '#4a5e92', jambeOmbre: '#34446e', ceinture: '#3a2a1a', jaune: '#b8b8c0' };
@@ -544,35 +545,56 @@ function dessinerHerosVol(x, ox, oy, t) {
 // jean et baskets. (ox, oy) : ses pieds. Poses : marche, prepare (il arme), frappe, touche, rigole.
 const PAL_V = { contour: '#140a14', peau: '#d89070', peauOmbre: '#a86048', barbe: '#8a5a40', sweat: '#5a4a72', sweatOmbre: '#3a2e52',
   jean: '#36508a', jeanOmbre: '#243a68', basket: '#e8e8f0', bande: '#d02828', casquette: '#d02828', casquetteClair: '#f05050', casquetteOmbre: '#901818' };
+// Les variantes : le voyou vert (un peu plus vif), et le Caïd, le chef de la bande (blouson de cuir, lunettes noires,
+// chaîne en or, bandana).
+const PALETTES_V = {
+  voyou: PAL_V,
+  voyou2: { ...PAL_V, peau: '#b87050', peauOmbre: '#8a4a34', barbe: '#3a2418', sweat: '#3e6a4a', sweatOmbre: '#284a32', casquette: '#2858c8', casquetteClair: '#5888f0', casquetteOmbre: '#183a8a', bande: '#2858c8' },
+  caid: { ...PAL_V, peau: '#e0a080', peauOmbre: '#b07050', barbe: '#5a3a28', sweat: '#2a2a32', sweatOmbre: '#18181e', jean: '#2a2a2a', jeanOmbre: '#1a1a1a', basket: '#c8a030', bande: '#7a5a10', casquette: '#c81818', casquetteClair: '#e84040', casquetteOmbre: '#c81818', caid: true },
+};
 function dessinerVoyou(x, ox, oy, f, e, t) {
+  const V = PALETTES_V[e.type] ?? PAL_V;
   ox = Math.round(ox); oy = Math.round(oy);
   const R = (px, py, w, h, c) => { x.fillStyle = c; x.fillRect(f > 0 ? ox + px : ox - px - w, oy + py, w, h); };
-  const O = (px, py, w, h, c) => { R(px - 1, py - 1, w + 2, h + 2, PAL_V.contour); R(px, py, w, h, c); };
+  const O = (px, py, w, h, c) => { R(px - 1, py - 1, w + 2, h + 2, V.contour); R(px, py, w, h, c); };
   const pose = e.pose;
   const p = pose === 'marche' ? Math.sin(e.marche) : 0;
   const rc = pose === 'touche' ? -3 : pose === 'rigole' ? -2 : pose === 'frappe' ? 2 : 0; // le haut du corps penche
   const hy = pose === 'touche' ? 1 : pose === 'rigole' ? Math.round(Math.abs(Math.sin(t * 20))) : 0;
-  O(-6 - Math.round(3 * p), -22, 6, 18, PAL_V.jeanOmbre); O(-7 - Math.round(3 * p), -4, 8, 4, PAL_V.basket); R(-7 - Math.round(3 * p), -3, 8, 1, PAL_V.bande);
-  O(1 + Math.round(3 * p), -22, 6, 18, PAL_V.jean); O(1 + Math.round(3 * p), -4, 8, 4, PAL_V.basket); R(1 + Math.round(3 * p), -3, 8, 1, PAL_V.bande);
-  O(-11 + rc, -42 + hy, 5, 16, PAL_V.sweatOmbre); O(-11 + rc, -27 + hy, 5, 4, PAL_V.peauOmbre);
-  O(-12 + rc, -50 + hy, 7, 9, PAL_V.sweatOmbre); // la capuche dans le dos
-  O(-9 + rc, -44 + hy, 18, 24, PAL_V.sweat);
-  R(-9 + rc, -44 + hy, 3, 24, PAL_V.sweatOmbre);
-  R(-2 + rc, -30 + hy, 10, 5, PAL_V.sweatOmbre);
-  R(4 + rc, -43 + hy, 1, 5, '#e8e8f0'); R(6 + rc, -43 + hy, 1, 4, '#e8e8f0');
-  O(-6 + rc, -58 + hy, 12, 12, PAL_V.peau);
-  R(-6 + rc, -58 + hy, 2, 12, PAL_V.peauOmbre);
-  R(-1 + rc, -50 + hy, 7, 4, PAL_V.barbe);
+  O(-6 - Math.round(3 * p), -22, 6, 18, V.jeanOmbre); O(-7 - Math.round(3 * p), -4, 8, 4, V.basket); R(-7 - Math.round(3 * p), -3, 8, 1, V.bande);
+  O(1 + Math.round(3 * p), -22, 6, 18, V.jean); O(1 + Math.round(3 * p), -4, 8, 4, V.basket); R(1 + Math.round(3 * p), -3, 8, 1, V.bande);
+  O(-11 + rc, -42 + hy, 5, 16, V.sweatOmbre); O(-11 + rc, -27 + hy, 5, 4, V.peauOmbre);
+  if (!V.caid) O(-12 + rc, -50 + hy, 7, 9, V.sweatOmbre); // la capuche dans le dos
+  O(-9 + rc, -44 + hy, 18, 24, V.sweat);
+  R(-9 + rc, -44 + hy, 3, 24, V.sweatOmbre);
+  if (V.caid) {
+    // Blouson de cuir ouvert, maillot blanc, grosse chaîne en or
+    R(1 + rc, -44 + hy, 5, 16, '#e8e8e8'); R(0 + rc, -44 + hy, 1, 18, '#4a4a56'); R(6 + rc, -44 + hy, 1, 18, '#4a4a56');
+    R(0 + rc, -43 + hy, 7, 1, '#f0c840'); R(2 + rc, -42 + hy, 3, 1, '#f0c840'); R(3 + rc, -41 + hy, 1, 2, '#f0c840');
+  } else {
+    R(-2 + rc, -30 + hy, 10, 5, V.sweatOmbre);
+    R(4 + rc, -43 + hy, 1, 5, '#e8e8f0'); R(6 + rc, -43 + hy, 1, 4, '#e8e8f0');
+  }
+  O(-6 + rc, -58 + hy, 12, 12, V.peau);
+  R(-6 + rc, -58 + hy, 2, 12, V.peauOmbre);
+  R(-1 + rc, -50 + hy, 7, 4, V.barbe);
   R(3 + rc, -54 + hy, 2, 2, '#201010');
   R(2 + rc, -56 + hy, 3, 1, '#3a1a10'); R(5 + rc, -57 + hy, 1, 1, '#3a1a10');
-  R(6 + rc, -53 + hy, 1, 2, PAL_V.peauOmbre);
+  R(6 + rc, -53 + hy, 1, 2, V.peauOmbre);
   if (pose === 'rigole') { R(2 + rc, -50 + hy, 4, 3, '#401010'); R(2 + rc, -50 + hy, 4, 1, '#ffffff'); }
   else R(3 + rc, -49 + hy, 3, 1, '#401010');
-  O(-6 + rc, -62 + hy, 12, 5, PAL_V.casquette); R(-6 + rc, -62 + hy, 12, 1, PAL_V.casquetteClair);
-  O(6 + rc, -58 + hy, 6, 2, PAL_V.casquetteOmbre);
-  if (pose === 'prepare') { O(-4 + rc, -46 + hy, 5, 10, PAL_V.sweat); O(-8 + rc, -50 + hy, 6, 6, PAL_V.peau); }
-  else if (pose === 'frappe') { O(4 + rc, -42 + hy, 16, 5, PAL_V.sweat); O(20 + rc, -43 + hy, 6, 6, PAL_V.peau); }
-  else { O(3 + rc + Math.round(2 * p), -42 + hy, 5, 16, PAL_V.sweat); O(3 + rc + Math.round(2 * p), -27 + hy, 5, 4, PAL_V.peau); }
+  if (V.caid) {
+    // Bandana rouge noué derrière (pas de visière) et lunettes noires
+    O(-6 + rc, -61 + hy, 12, 3, V.casquette); R(-6 + rc, -61 + hy, 12, 1, V.casquetteClair);
+    R(-9 + rc, -60 + hy, 3, 1, V.casquette); R(-10 + rc, -59 + hy, 2, 2, V.casquette);
+    R(1 + rc, -55 + hy, 6, 2, '#101014'); R(2 + rc, -55 + hy, 1, 1, '#8090a8');
+  } else {
+    O(-6 + rc, -62 + hy, 12, 5, V.casquette); R(-6 + rc, -62 + hy, 12, 1, V.casquetteClair);
+    O(6 + rc, -58 + hy, 6, 2, V.casquetteOmbre);
+  }
+  if (pose === 'prepare') { O(-4 + rc, -46 + hy, 5, 10, V.sweat); O(-8 + rc, -50 + hy, 6, 6, V.peau); }
+  else if (pose === 'frappe') { O(4 + rc, -42 + hy, 16, 5, V.sweat); O(20 + rc, -43 + hy, 6, 6, V.peau); }
+  else { O(3 + rc + Math.round(2 * p), -42 + hy, 5, 16, V.sweat); O(3 + rc + Math.round(2 * p), -27 + hy, 5, 4, V.peau); }
 }
 const tmpEnnemi = toile(90, 90);
 function dessinerEnnemi(e, t) {
@@ -583,12 +605,17 @@ function dessinerEnnemi(e, t) {
     // Il bascule en arrière et s'écrase par terre (dessiné à part puis tourné)
     const c = tmpEnnemi.getContext('2d');
     c.clearRect(0, 0, 90, 90);
-    dessinerVoyou(c, 45, 80, e.f, { pose }, t);
+    dessinerVoyou(c, 45, 80, e.f, { pose, type: e.type }, t);
     const angle = Math.min(1, e.t / 0.35) * (Math.PI / 2) * (e.koDir || 1); // frappé dans le dos : il tombe en avant
     g.save(); g.translate(Math.round(sx), Math.round(sy)); g.rotate(angle); g.drawImage(tmpEnnemi, -45, -80); g.restore();
     return;
   }
-  dessinerVoyou(g, sx, sy, e.f, { pose, marche: e.marche }, t);
+  dessinerVoyou(g, sx, sy, e.f, { pose, marche: e.marche, type: e.type }, t);
+  // La barre de vie du Caïd, au-dessus de sa tête
+  if (e.type === 'caid' && e.vie < e.vieMax) {
+    g.fillStyle = PAL.contour; g.fillRect(Math.round(sx) - 13, Math.round(sy) - 70, 26, 4);
+    g.fillStyle = '#ff3030'; g.fillRect(Math.round(sx) - 12, Math.round(sy) - 69, Math.round(24 * e.vie / e.vieMax), 2);
+  }
 }
 
 // Petite icône de pouce de la jauge (vide, pleine de chocolat, ou dorée pendant le pouvoir)
@@ -682,6 +709,13 @@ const proche = toile(512, H, (x) => {
     x.fillStyle = '#801424'; x.fillRect(vx - 4, 89, 80, 1);
   }
   for (const dx of [148, 412]) { x.fillStyle = '#2a1214'; x.fillRect(dx, 96, 22, 46); x.fillStyle = '#140608'; x.fillRect(dx + 2, 98, 18, 44); x.fillStyle = '#f8d070'; x.fillRect(dx + 16, 118, 2, 2); }
+  // Une ruelle sombre entre deux immeubles, avec son escalier de secours et sa benne
+  x.fillStyle = '#0e0408'; x.fillRect(456, 66, 44, 76);
+  x.fillStyle = '#1a0a10'; x.fillRect(456, 66, 6, 76); x.fillRect(494, 66, 6, 76);
+  x.fillStyle = '#2e2236';
+  for (let y = 74; y < 132; y += 16) { x.fillRect(464, y, 28, 2); x.fillRect(464, y, 1, 10); x.fillRect(491, y, 1, 10); }
+  for (let y = 76; y < 130; y += 4) x.fillRect(470 + ((y / 4) % 2), y, 6, 1);
+  x.fillStyle = '#2a4a34'; x.fillRect(464, 124, 26, 18); x.fillStyle = '#1a3022'; x.fillRect(464, 124, 26, 3); x.fillRect(470, 130, 14, 1);
   // Tags sur les murs
   x.fillStyle = '#38c868'; x.fillRect(200, 110, 14, 2); x.fillRect(206, 104, 2, 12);
   x.fillStyle = '#e848c8'; x.fillRect(230, 120, 20, 2); x.fillRect(240, 112, 2, 10); x.fillRect(470, 104, 12, 2);
@@ -721,26 +755,52 @@ function dessinerDecor(cam, t) {
 }
 
 // =====================================================================================
-//  Le monde (étape 1 : le héros seul dans la rue, pour essayer les déplacements)
+//  Le monde 1 : la ville en chaos
 // =====================================================================================
 const ZMIN = 150, ZMAX = 216; // profondeur où l'on marche (le bas des pieds à l'écran)
 let heros, cam, particules, effets, secousse, score, debutJeu;
-let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT;
-// Les vagues de voyous du monde 1 : quand le héros arrive à x, la caméra s'arrête et n voyous arrivent.
-const VAGUES_MONDE1 = [{ x: 360, n: 2 }, { x: 1000, n: 3 }, { x: 1700, n: 4 }, { x: 2450, n: 5 }];
+let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT, pigeons;
+// Les vagues du monde 1 : quand le héros arrive à x, la caméra s'arrête et ces voyous arrivent, un par un,
+// des deux côtés de l'écran. La dernière vague amène le Caïd, le chef de la bande.
+const VAGUES_MONDE1 = [
+  { x: 360, ennemis: ['voyou', 'voyou'] },
+  { x: 1000, ennemis: ['voyou', 'voyou2', 'voyou'] },
+  { x: 1700, ennemis: ['voyou2', 'voyou', 'voyou2', 'voyou'] },
+  { x: 2450, ennemis: ['voyou', 'voyou2', 'caid', 'voyou', 'voyou2'] },
+];
+// Le décor vivant de la rue : pigeons sur la corniche (ils saluent ChocoPouce), barils en feu, bouches d'égout qui fument
+const BARILS_MONDE1 = [540, 1330, 2060, 2820];
+const EGOUTS_MONDE1 = [800, 1560, 2300];
 function nouvellePartie() {
   heros = { x: 70, z: 190, h: 0, vh: 0, f: 1, marche: 0, dashT: 0, dashDir: 0, dashAir: false, coupT: 0, coupFait: true, atterT: 0,
     blesseT: 0, invT: 0, vie: REGLAGES.VIE_HEROS, choco: false, fantomes: [] };
   cam = 0; particules = []; effets = []; secousse = 0; score = 0; debutJeu = tJeu;
-  ennemis = []; jauge = 0; pouvoir = 0; vagues = VAGUES_MONDE1.map((v) => ({ ...v })); vague = null; bloque = false; goT = 0; finT = 0;
+  ennemis = []; jauge = 0; pouvoir = 0; vagues = VAGUES_MONDE1.map((v) => ({ ...v, ennemis: [...v.ennemis] })); vague = null; bloque = false; goT = 0; finT = 0;
+  pigeons = [];
+  for (let x = 170, i = 0; x < REGLAGES.LONGUEUR_MONDE - 80; x += 150 + ((i * 97) % 140), i++) pigeons.push({ x, f: i % 3 ? -1 : 1, salut: 0, fait: false });
 }
 
 // ——— Les voyous (monde 1) ———
 const TYPES_ENNEMIS = {
-  voyou: { vitesse: 34, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT, portee: 30, preparation: 0.5, recharge: 1.5 },
+  voyou: { vitesse: 34, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT, portee: 30, preparation: 0.5, recharge: 1.5, degats: () => REGLAGES.DEGATS_ENNEMI },
+  voyou2: { vitesse: 42, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.85, portee: 30, preparation: 0.45, recharge: 1.3, degats: () => REGLAGES.DEGATS_ENNEMI },
+  // Le Caïd : deux fois plus de coups, frappe plus fort, mais très lent à se retourner
+  caid: { vitesse: 30, vie: () => REGLAGES.COUPS_POUR_TUER * 2, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 1.3, portee: 32, preparation: 0.6, recharge: 1.6, degats: () => REGLAGES.DEGATS_ENNEMI * 1.5 },
 };
-function nouvelEnnemi(x, z, f) {
-  return { type: 'voyou', x, z, h: 0, vh: 0, f, vie: REGLAGES.COUPS_POUR_TUER, etat: 'marche', t: 0, marche: 0, tRetour: 0, recharge: 0.8 + Math.random(), alerte: 0, bulle: null };
+function nouvelEnnemi(type, x, z, f) {
+  const vie = TYPES_ENNEMIS[type].vie();
+  return { type, x, z, h: 0, vh: 0, f, vie, vieMax: vie, etat: 'marche', t: 0, marche: 0, tRetour: 0, recharge: 0.8 + Math.random(), alerte: 0, bulle: null };
+}
+// Les pigeons de la corniche : quand ChocoPouce passe dessous, ils lui font le salut militaire.
+function majPigeons(dt) {
+  for (const p of pigeons) {
+    if (p.salut > 0) p.salut -= dt;
+    if (!p.fait && Math.abs(heros.x - p.x) < 34) {
+      p.fait = true; p.salut = 1.8;
+      if (Math.random() < 0.5) texteFlottant('ROUCOU!', p.x, 62, 0, '#e8e8f8', 0.9);
+      if (actx) bip('square', 1200, 1500, 0.05, 0.05);
+    }
+  }
 }
 function majEnnemis(dt) {
   const hr = heros;
@@ -766,7 +826,7 @@ function majEnnemis(dt) {
       e.t -= dt;
       if (e.t <= 0) {
         e.etat = 'frappe'; e.t = 0.22;
-        if (Math.abs(hr.x - e.x) < ty.portee + 6 && Math.sign(hr.x - e.x) === e.f && Math.abs(dz) < 10 && hr.h < 30) blesser(REGLAGES.DEGATS_ENNEMI, e.f);
+        if (Math.abs(hr.x - e.x) < ty.portee + 6 && Math.sign(hr.x - e.x) === e.f && Math.abs(dz) < 10 && hr.h < 30) blesser(ty.degats(), e.f);
       }
       continue;
     }
@@ -853,21 +913,23 @@ function majVagues(dt) {
   if (goT > 0) goT -= dt;
   if (!vague) {
     const v = vagues.find((w) => !w.faite && heros.x >= w.x);
-    if (v) { vague = v; v.faite = true; v.reste = v.n; v.prochain = 0.3; bloque = true; }
+    if (v) { vague = v; v.faite = true; v.prochain = 0.3; bloque = true; }
   } else {
-    if (vague.reste > 0) {
+    if (vague.ennemis.length) {
       vague.prochain -= dt;
       if (vague.prochain <= 0) {
-        const cote = vague.reste % 2 ? 1 : -1;
-        ennemis.push(nouvelEnnemi(cote > 0 ? cam + L + 24 : cam - 24, ZMIN + 8 + Math.random() * (ZMAX - ZMIN - 14), -cote));
-        vague.reste--; vague.prochain = 0.9;
+        const type = vague.ennemis.shift();
+        const cote = vague.ennemis.length % 2 ? 1 : -1;
+        ennemis.push(nouvelEnnemi(type, cote > 0 ? cam + L + 24 : cam - 24, ZMIN + 8 + Math.random() * (ZMAX - ZMIN - 14), -cote));
+        if (type === 'caid') { texteFlottant('LE CAÏD !', cam + L / 2, 120, 0, '#ff4040', 2); son('retourne'); secousse = 0.2; }
+        vague.prochain = 0.9;
       }
     } else if (!ennemis.some((e) => e.etat !== 'ko')) {
       vague = null; bloque = false;
-      if (vagues.some((w) => !w.faite)) { goT = 2.5; son('go'); }
+      goT = 2.5; son('go');
     }
   }
-  if (!vague && vagues.every((w) => w.faite) && heros.x > REGLAGES.LONGUEUR_MONDE - 60 && etat === 'jeu') changerEtat('fin');
+  if (!vague && vagues.every((w) => w.faite) && heros.x > REGLAGES.LONGUEUR_MONDE - 60 && etat === 'jeu') { changerEtat('fin'); finT = 0; son('pouvoir'); }
 }
 function majHeros(dt) {
   const hr = heros, auSol = hr.h <= 0 && hr.vh <= 0;
@@ -959,10 +1021,46 @@ function ombre(sx, z, h) {
   const w = Math.round(22 * k);
   g.fillRect(sx - (w >> 1), z - 1, w, 3); g.fillRect(sx - (w >> 1) + 2, z - 2, w - 4, 5);
 }
+// La rue qui vit : bouches d'égout qui fument, barils en feu contre les façades, pigeons sur la corniche.
+function dessinerRue(t) {
+  for (const ex of EGOUTS_MONDE1) {
+    const sx = Math.round(ex - cam);
+    if (sx < -40 || sx > L + 40) continue;
+    g.fillStyle = '#121018'; g.fillRect(sx - 9, 199, 18, 4); g.fillRect(sx - 7, 198, 14, 6);
+    g.fillStyle = '#3a3846'; for (let k = -6; k <= 6; k += 3) g.fillRect(sx + k, 199, 1, 4);
+    for (let k = 0; k < 5; k++) {
+      const c = ((t * 0.6 + k / 5) % 1);
+      g.globalAlpha = 0.35 * (1 - c);
+      disque(g, Math.round(sx + Math.sin(t * 2 + k) * 4 + c * 6), Math.round(196 - c * 70), Math.round(3 + c * 9), '#d8d0e0');
+    }
+    g.globalAlpha = 1;
+  }
+  for (const bx of BARILS_MONDE1) {
+    const sx = Math.round(bx - cam);
+    if (sx < -40 || sx > L + 40) continue;
+    g.globalAlpha = 0.14 + Math.sin(t * 11 + bx) * 0.04; disque(g, sx, 128, 22, '#ff8a20'); g.globalAlpha = 1;
+    g.fillStyle = '#140a0c'; g.fillRect(sx - 8, 133, 16, 18);
+    g.fillStyle = '#6a3a24'; g.fillRect(sx - 7, 134, 14, 16);
+    g.fillStyle = '#4a2416'; g.fillRect(sx - 7, 138, 14, 2); g.fillRect(sx - 7, 145, 14, 2); g.fillRect(sx - 7, 134, 3, 16);
+    g.fillStyle = '#8a5a3a'; g.fillRect(sx + 3, 135, 2, 14);
+    for (let i = 0; i < 6; i++) {
+      const hh = 4 + ((Math.sin(t * 14 + i * 2.3 + bx) + 1) * 4 | 0);
+      g.fillStyle = i % 2 ? '#ffd040' : '#ff6a1a';
+      g.fillRect(sx - 6 + i * 2, 133 - hh, 2, hh);
+    }
+    if (Math.floor(t * 8 + bx) % 3 === 0) { g.fillStyle = '#ffe080'; g.fillRect(sx - 1 + Math.round(Math.sin(t * 5) * 4), 116 - Math.round((t * 30) % 16), 1, 1); }
+  }
+  for (const p of pigeons) {
+    const sx = Math.round(p.x - cam);
+    if (sx < -20 || sx > L + 20) continue;
+    pigeon(sx, 60, 1, p.f, p.salut > 0);
+  }
+}
 function dessinerJeu(t) {
   const sx = secousse > 0 ? Math.round((Math.random() * 2 - 1) * 3) : 0, sy = secousse > 0 ? Math.round((Math.random() * 2 - 1) * 2) : 0;
   g.save(); g.translate(sx, sy);
   dessinerDecor(cam, t);
+  dessinerRue(t);
   const hr = heros;
   ombre(Math.round(hr.x - cam), Math.round(hr.z), hr.h);
   // Traînée du dash : des copies qui s'effacent
@@ -1169,9 +1267,12 @@ const FIN_CLIP = () => TEMPS_CLIP.at(-1) + 8;
 // Le temps du clip : celui du générique s'il joue (le clip suit la chanson), sinon une horloge.
 // « index.html?a=40 » commence le clip à 40 s (pratique pour revoir une scène).
 const DEPART = Number(new URLSearchParams(location.search).get('a')) || 0;
+// L'écran d'accueil (le héros, le logo, « APPUIE SUR START ») reste DUREE_ACCUEIL secondes après la chanson.
+const DUREE_ACCUEIL = 20;
+let accueilT = 0;
 function tempsClip() {
-  if (generiqueOK && !generique.paused) return generique.currentTime;
-  return (tEtat + DEPART) % FIN_CLIP();
+  if (generiqueOK && (!generique.paused || generique.ended)) return generique.currentTime;
+  return (tEtat + DEPART) % (FIN_CLIP() + DUREE_ACCUEIL);
 }
 
 // CALAGE : ouvrir index.html?caler, écouter la chanson et appuyer sur ESPACE au début de chaque ligne
@@ -1634,7 +1735,29 @@ function paroles(str, tl) {
     if (vu) texte(vu, (L - (l.length * 6 - 1)) / 2, H - hb + i * 10, '#ffffff', 1, '#000');
   });
 }
+// L'écran d'accueil : la ville de nuit, ChocoPouce debout au centre, cape et cheveux au vent, le gros logo chocolat.
+function dessinerAccueil(t) {
+  g.drawImage(ciel, 0, 0);
+  g.drawImage(loin, Math.round(t * 4) % 320, 0, L, H, 0, 30, L, H);
+  g.drawImage(milieu, 80 + Math.round(t * 8) % 320, 0, L, H, 0, 58, L, H);
+  g.fillStyle = '#120612'; g.fillRect(0, 196, L, 28);
+  g.fillStyle = '#26101e'; g.fillRect(0, 196, L, 2);
+  g.globalAlpha = 0.25; disque(g, 160, 150, 60, '#ffd890'); g.globalAlpha = 1;
+  herosGrand(160, 214, 2, 1, { pose: 'debout', choco: true }, t * 2.2);
+  if (Math.floor(t * 5) % 4 === 0) etincelle(160 + 9 * 2, 214 - 32 * 2, 3);
+  const k = Math.min(1, t / 0.6);
+  logoEn(-60 + k * 72);
+  if (t > 0.8) texte('LE HÉROS AU POUCE CHOCOLATÉ', L / 2, 58, '#ffe8c0', 1, '#2a0a04', 'c');
+  if (t > 1 && Math.floor(t * 2.2) % 2 === 0) texte(tactile ? "TOUCHE L'ÉCRAN" : 'APPUIE SUR START', L / 2, 202, OR, 2, '#3a0a00', 'c');
+  texte('© 2026', L - 4, H - 10, '#8a6a4a', 1, null, 'd');
+}
 function dessinerClip(T, dt) {
+  // Après la chanson : l'écran d'accueil
+  if (!CALAGE && (accueilT > 0 || (!(generiqueOK && generique.ended) && T > FIN_CLIP()))) {
+    dessinerAccueil(accueilT > 0 ? accueilT : T - FIN_CLIP());
+    if (fondu > 0) { g.fillStyle = `rgba(0,0,0,${fondu})`; g.fillRect(0, 0, L, H); }
+    return;
+  }
   let i;
   if (CALAGE) i = calage.length - 1;
   else { i = T < TEMPS_CLIP[0] ? -1 : 0; while (i >= 0 && i + 1 < TEMPS_CLIP.length && TEMPS_CLIP[i + 1] <= T) i++; }
@@ -1660,6 +1783,28 @@ function dessinerClip(T, dt) {
   if (fondu > 0) { g.fillStyle = `rgba(0,0,0,${fondu})`; g.fillRect(0, 0, L, H); }
 }
 
+// L'écran « MONDE 1 » : le titre du monde en lettres d'or, une bande de la ville, le héros qui traverse.
+function dessinerEcranMonde() {
+  const t = tEtat;
+  g.fillStyle = '#000'; g.fillRect(0, 0, L, H);
+  const ouv = Math.min(1, t / 0.4);
+  const hb = Math.round(70 * ouv);
+  g.save(); g.beginPath(); g.rect(0, 112 - hb, L, hb * 2); g.clip();
+  g.drawImage(ciel, 0, 0);
+  g.drawImage(loin, Math.round(t * 20) % 320, 0, L, H, 0, 0, L, H);
+  g.drawImage(milieu, Math.round(t * 40) % 320, 0, L, H, 0, 24, L, H);
+  g.fillStyle = 'rgba(10,0,10,0.35)'; g.fillRect(0, 0, L, H);
+  g.restore();
+  g.fillStyle = '#ffd040'; g.fillRect(0, 112 - hb - 2, L, 2); g.fillRect(0, 112 + hb, L, 2);
+  if (t > 0.4) {
+    const p = Math.min(1, (t - 0.4) / 0.25);
+    texte('MONDE 1', L / 2 - (1 - p) * 300, 30, OR, 4, '#3a0a00', 'c');
+    if (t > 0.8) texte('LA VILLE EN CHAOS', L / 2 + Math.max(0, 1 - (t - 0.8) / 0.25) * 300, 152, ['#ffd0d0', '#ff9090', '#ff6060', '#ff3030', '#e01818', '#b00808', '#900000'], 2, '#200000', 'c');
+  }
+  dessinerHeros(g, -30 + t * 70, 200, 1, { pose: 'marche', marche: t * 11, choco: false }, t);
+  if (t > 1.6 && Math.floor(t * 3) % 2 === 0) texte('PRÊT ?', L / 2, 196, '#ffffff', 1, '#000', 'c');
+}
+
 function basculerPause() {
   if (etat === 'jeu') { changerEtat('pause'); son('pause'); }
   else if (etat === 'pause') { changerEtat('jeu'); son('pause'); }
@@ -1682,23 +1827,37 @@ function mettreAJour(dt) {
   } else if (etat === 'titre') {
     if (fondu > 0) {
       fondu += dt * 2.5;
-      if (fondu >= 1) { fondu = 0; musiqueTitre(false); nouvellePartie(); changerEtat('jeu'); }
+      if (fondu >= 1) { fondu = 0; musiqueTitre(false); nouvellePartie(); changerEtat('monde'); son('monde'); }
     } else if (tEtat > 0.6 && (fronts.entree || (!CALAGE && (fronts.coup || fronts.saut || (tactile && fronts.nimporte))))) {
       son('start'); fondu = 0.01;
     }
   } else if (etat === 'jeu') {
     tJeu += dt;
     if (fronts.entree) basculerPause();
-    else { majHeros(dt); majEnnemis(dt); majVagues(dt); majParticules(dt); }
+    else { majHeros(dt); majEnnemis(dt); majVagues(dt); majPigeons(dt); majParticules(dt); }
   } else if (etat === 'pause') {
     if (fronts.entree) basculerPause();
   } else if (etat === 'pouvoirAnim') {
     // Le jeu est figé le temps de l'énorme pouce
     if (tEtat >= REGLAGES.DUREE_ANIM_POUVOIR) { etat = 'jeu'; tEtat = 0; }
-  } else if (etat === 'gameover' || etat === 'fin') {
+  } else if (etat === 'monde') {
+    // L'écran « MONDE 1 » avant le niveau
+    if (tEtat > 3.2 || (tEtat > 0.8 && (fronts.entree || fronts.coup || fronts.saut))) changerEtat('jeu');
+  } else if (etat === 'gameover') {
     tJeu += dt;
     majParticules(dt);
-    if (tEtat > 1.5 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); nouvellePartie(); changerEtat('jeu'); }
+    if (tEtat > 1.5 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); nouvellePartie(); changerEtat('monde'); son('monde'); }
+  } else if (etat === 'fin') {
+    // Fin du monde : le bonus de vie s'ajoute au score, puis retour à l'écran titre
+    tJeu += dt;
+    majParticules(dt);
+    if (tEtat > 2.6 && finT === 0) { finT = 1; score += heros.vie * 10; son('go'); }
+    if (tEtat > 3.2 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); changerEtat('titre'); accueilT = 0; musiqueTitre(true); }
+  }
+  // L'écran d'accueil après le clip : quand la chanson est finie, il reste 20 s, puis le clip recommence
+  if (etat === 'titre' && generiqueOK && generique.ended && !CALAGE) {
+    accueilT += dt;
+    if (accueilT > DUREE_ACCUEIL) { accueilT = 0; generique.currentTime = 0; generique.play().catch(() => {}); }
   }
   for (const k in fronts) fronts[k] = false;
 }
@@ -1709,6 +1868,7 @@ function dessiner(dt) {
     if (Math.floor(tEtat * 1.6) % 2 === 0) texte(tactile ? "TOUCHE L'ÉCRAN POUR ALLUMER" : 'APPUIE SUR UNE TOUCHE POUR ALLUMER', L / 2, 112, '#c8c8c8', 1, null, 'c');
   } else if (etat === 'boot') dessinerBoot();
   else if (etat === 'titre') dessinerClip(tempsClip(), dt);
+  else if (etat === 'monde') dessinerEcranMonde();
   else {
     dessinerJeu(tJeu);
     if (etat === 'pouvoirAnim') {
@@ -1727,11 +1887,22 @@ function dessiner(dt) {
       if (tEtat > 0.6) texte('GAME OVER', 160, 34, ['#ffffff', '#ffd0d0', '#ff9090', '#ff5050', '#ff2020', '#d00000', '#a00000'], 4, '#2a0000', 'c');
       if (tEtat > 1.5 && Math.floor(tEtat * 2) % 2 === 0) texte(tactile ? "TOUCHE POUCE : RECOMMENCER LE MONDE" : 'START : RECOMMENCER LE MONDE', 160, 196, '#fff', 1, '#000', 'c');
     } else if (etat === 'fin') {
-      g.fillStyle = `rgba(0,0,0,${Math.min(0.6, tEtat)})`; g.fillRect(0, 0, L, H);
-      texte('BRAVO !', 160, 60, OR, 4, '#3a0a00', 'c');
-      texte('LA RUE EST NETTOYÉE', 160, 110, '#fff', 1, '#000', 'c');
-      texte(`SCORE ${String(score).padStart(6, '0')}`, 160, 126, '#ffe040', 1, '#000', 'c');
-      if (tEtat > 1.5 && Math.floor(tEtat * 2) % 2 === 0) texte('START : REJOUER', 160, 170, '#fff', 1, '#000', 'c');
+      // MONDE 1 TERMINÉ ! : il lève le pouce, le bonus de vie se compte
+      g.fillStyle = `rgba(10,0,16,${Math.min(0.8, tEtat)})`; g.fillRect(0, 0, L, H);
+      if (tEtat > 0.3) { g.globalAlpha = Math.min(1, (tEtat - 0.3) * 3); rayons(110, 150, tEtat * 0.5, 'rgba(0,0,0,0)', 'rgba(255,200,80,0.12)', 14); g.globalAlpha = 1; }
+      herosGrand(100, 214, 2, 1, { pose: 'coup', choco: true }, tJeu);
+      if (Math.floor(tJeu * 6) % 3 === 0) etincelle(100 + 20 * 2, 214 - 51 * 2, 4);
+      texte('MONDE 1', 220, 30, OR, 3, '#3a0a00', 'c');
+      texte('TERMINÉ !', 220, 58, OR, 3, '#3a0a00', 'c');
+      const bonus = Math.min(heros.vie * 10, Math.max(0, Math.round((tEtat - 1.2) * 600)));
+      if (tEtat > 1) {
+        texte(`VIE ${heros.vie} × 10`, 175, 100, '#ffffff', 1, '#000');
+        texte(`+${finT ? heros.vie * 10 : bonus}`, 300, 100, '#ffe040', 1, '#000', 'd');
+        texte('SCORE', 175, 116, '#ffffff', 1, '#000');
+        texte(String(finT ? score : score + bonus).padStart(6, '0'), 300, 116, '#ffe040', 1, '#000', 'd');
+      }
+      if (tEtat > 2.8) { texte('PROCHAIN MONDE : LA FORÊT', 220, 146, '#90e870', 1, '#0a2a04', 'c'); texte('BIENTÔT !', 220, 158, '#90e870', 1, '#0a2a04', 'c'); }
+      if (tEtat > 3.2 && Math.floor(tEtat * 2) % 2 === 0) texte('START : ÉCRAN TITRE', 220, 182, '#fff', 1, '#000', 'c');
     }
     if (etat === 'pause') {
       g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 0, L, H);
@@ -1751,7 +1922,7 @@ function boucle() {
 }
 requestAnimationFrame(boucle);
 // « index.html?test » : l'état du jeu lisible depuis la console (pour les essais automatiques)
-if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque });
+if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque, accueilT, generiqueOK, fini: generique.ended, temps: generique.currentTime, duree: generique.duration });
 </script>
 </body>
 </html>
