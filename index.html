@@ -215,14 +215,19 @@ const SONS = {
 };
 const son = (n) => { if (actx && actx.state === 'running') SONS[n](); };
 
-// Le générique : déposer « generique.mp3 » à côté de ce fichier, il tourne sur l'écran titre.
+// Le générique : « generique.aac » (ou .mp3, .m4a) à côté de ce fichier, il tourne pendant le clip de l'intro.
 // Sans fichier, une petite boucle chiptune joue à sa place.
-const generique = new Audio('generique.mp3');
+const SOURCES_GENERIQUE = ['generique.aac', 'generique.mp3', 'generique.m4a'];
+const generique = new Audio();
 generique.loop = true;
 generique.preload = 'auto';
-let generiqueOK = false;
+let generiqueOK = false, sourceGenerique = 0;
 generique.addEventListener('canplay', () => { generiqueOK = true; });
-generique.addEventListener('error', () => { generiqueOK = false; });
+generique.addEventListener('error', () => {
+  generiqueOK = false;
+  if (++sourceGenerique < SOURCES_GENERIQUE.length) generique.src = SOURCES_GENERIQUE[sourceGenerique];
+});
+generique.src = SOURCES_GENERIQUE[0];
 let boucleChip = null;
 function musiqueTitre(jouer) {
   if (jouer) {
@@ -405,15 +410,25 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   // Cheveux mi-longs
   O(-8 + pench, -61 + hy, 6, 15, PAL.cheveux);
   R(-8 + pench, -58 + hy, 1, 11, PAL.cheveuxOmbre); R(-5 + pench, -56 + hy, 1, 9, PAL.cheveuxOmbre);
-  O(-6 + pench, -63 + hy, 12, 3, PAL.cheveux);
-  R(1 + pench, -61 + hy, 3, 2, PAL.cheveux);
-  R(-4 + pench, -63 + hy, 4, 1, PAL.cheveuxClair);
+  // Le dessus de la tête : une frange... ou sa calvitie quand le casque s'envole (e.chauve : de combien il s'est levé)
+  const lev = e.chauve ? Math.round(e.chauve) : 0;
+  if (lev) {
+    R(-5 + pench, -66 + hy, 11, 1, PAL.contour);
+    R(-7 + pench, -65 + hy, 1, 3, PAL.contour); R(7 + pench, -65 + hy, 1, 3, PAL.contour);
+    R(-6 + pench, -65 + hy, 13, 3, PAL.peau);
+    R(-1 + pench, -65 + hy, 3, 1, '#ffffff'); R(-2 + pench, -64 + hy, 1, 1, '#fff8e0');
+  } else {
+    O(-6 + pench, -63 + hy, 12, 3, PAL.cheveux);
+    R(1 + pench, -61 + hy, 3, 2, PAL.cheveux);
+    R(-4 + pench, -63 + hy, 4, 1, PAL.cheveuxClair);
+  }
   // Petit casque
-  O(-6 + pench, -68 + hy, 12, 5, PAL.casque);
-  R(-3 + pench, -68 + hy, 4, 1, '#ffffff');
-  R(-1 + pench, -68 + hy, 2, 5, PAL.jaune);
-  R(-7 + pench, -64 + hy, 14, 1, PAL.casqueOmbre);
-  R(6 + pench, -64 + hy, 3, 1, PAL.casqueOmbre);
+  const cy = hy - lev;
+  O(-6 + pench, -68 + cy, 12, 5, PAL.casque);
+  R(-3 + pench, -68 + cy, 4, 1, '#ffffff');
+  R(-1 + pench, -68 + cy, 2, 5, PAL.jaune);
+  R(-7 + pench, -64 + cy, 14, 1, PAL.casqueOmbre);
+  R(6 + pench, -64 + cy, 3, 1, PAL.casqueOmbre);
 
   // Bras avant, avec le pouce
   let pouce;
@@ -807,10 +822,10 @@ function dessinerBoot() {
 const CLIP = [
   ['ville', 'QUAND LA VILLE TREMBLE ET QUE LE CIEL DEVIENT ROUGE'],
   ['arrivee', 'UN CRI RÉSONNE, IL ARRIVE, CHOCO POUCE'],
-  ['cheveux', ''],                       // « Son [or a brillé ?], cheveux au vent » : à confirmer
-  ['cheveux', ''],                       // « Même s'il n'en a pas beaucoup, ça [détend ?] » : à confirmer
+  ['cheveux', ''],                       // « Son [or a brillé ?], cheveux au vent » : début de ligne à confirmer
+  ['calvitie', "MÊME S'IL N'EN A PAS BEAUCOUP, ÇA DÉPEND"], // il a une calvitie : des fois des cheveux, des fois non
   ['pouce', "IL N'A QU'UN POUVOIR : LE POUCE SUPRÊME"],
-  ['pouce', ''],                         // « Un geste sacré hérité d'un [vieux sens extrême ?] » : à confirmer
+  ['sensei', "UN GESTE SACRÉ HÉRITÉ D'UN VIEUX SENSEI EXTRÊME"],
   ['demon', ''],                         // « On raconte qu'un [seul ?] peut [pousser le rêve ?] » : à confirmer
   ['demon', 'PEUT FAIRE DOUTER MÊME UN DÉMON ÉNERVÉ'],
   ['dash', 'IL COURT PAS, IL DASH'],
@@ -829,7 +844,7 @@ const CLIP = [
   ['refrain', 'CHOCO POUCE ! CHOCO POUCE !'],
   // Couplet 2
   ['constipax', 'SON RIVAL : GÉNÉRAL CONSTIPAX'],
-  ['constipax', ''],                     // « Un type [qui a va ?], c'est complexe » : à confirmer
+  ['constipax', 'UN TYPE QUI A SES COMPLEXES'],
   ['constipax', ''],                     // « Il [jure de vaincre ?] Choco Pouce chaque saison » : à confirmer
   ['ko', 'MAIS FINIT K.O. DANS LES CINQ PREMIÈRES SECONDES'],
   ['ko', 'SANS RAISON'],
@@ -857,10 +872,11 @@ const CLIP = [
   ['final', 'LE MONDE CHANTE SON NOM'],
   ['final', 'CHOCO POUCE !'],
 ];
-// Le moment (en secondes depuis le début de generique.mp3) où commence chaque ligne de CLIP.
-// En attendant la vraie chanson : une ligne toutes les 3,6 s. Pour les caler sur la chanson,
-// ouvrir « index.html?caler » (voir CALAGE plus bas) et coller ici la liste obtenue.
-let TEMPS_CLIP = CLIP.map((_, i) => +(4 + i * 3.6).toFixed(1));
+// Le moment (en secondes depuis le début du générique) où commence chaque ligne de CLIP.
+// En attendant le calage : les lignes réparties de 12 s (fin de l'intro musicale) à 250 s (la chanson dure
+// 4 min 21). Pour les caler pile sur la chanson, ouvrir « index.html?caler » (voir CALAGE plus bas) et
+// coller ici la liste obtenue.
+let TEMPS_CLIP = CLIP.map((_, i) => +(12 + (i * 238) / (CLIP.length - 1)).toFixed(1));
 try {
   const c = JSON.parse(localStorage.getItem('chocopouce-calage') || 'null');
   if (Array.isArray(c) && c.length === CLIP.length) TEMPS_CLIP = c;
@@ -991,6 +1007,31 @@ function demon(px, py, s, t) {
   R(-4, -40, 8, 2, '#3a0404'); R(-3, -40, 1, 1, '#fff'); R(2, -40, 1, 1, '#fff');
   for (let i = 0; i < 3; i++) { const k = (t * 1.5 + i / 3) % 1; R(9 + i * 2, -50 + k * 14, 1, 2, '#60c8ff'); }
 }
+// Le vieux sensei extrême qui lui a transmis le geste sacré : crâne chauve, bandeau rouge, longue barbe blanche,
+// le pouce levé. (px, py) : ses pieds.
+function sensei(px, py, s, t) {
+  const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(px + x * s), Math.round(py + y * s), w * s, h * s); };
+  const O = (x, y, w, h, c) => { R(x - 1, y - 1, w + 2, h + 2, '#1a1010'); R(x, y, w, h, c); };
+  const vent = Math.round(Math.sin(t * 6));
+  O(-5, -4, 4, 4, '#3a2a20'); O(1, -4, 4, 4, '#3a2a20');
+  O(-9, -30, 18, 27, '#e8e0d0'); R(-9, -30, 3, 27, '#b8b0a0'); R(-1, -30, 2, 14, '#c8c0b0');
+  R(-9, -17, 18, 3, '#202020');
+  O(-13, -28, 4, 12, '#e8e0d0'); O(-13, -17, 4, 3, '#e8b890');
+  // Le bras levé, le pouce en l'air
+  O(9, -30, 4, 12, '#e8e0d0'); O(9, -36, 5, 5, '#e8b890'); O(10, -41, 2, 5, '#e8b890');
+  // La tête : chauve et luisante, bandeau rouge qui flotte
+  O(-6, -42, 12, 12, '#e8b890'); R(-6, -42, 2, 12, '#c89070');
+  R(-3, -42, 4, 1, '#ffffff'); R(-4, -41, 1, 1, '#fff8e0');
+  R(-6, -38, 12, 2, '#d02020'); R(-10 - vent, -38, 4, 1, '#d02020'); R(-13 - vent, -37 + vent, 3, 1, '#d02020');
+  R(-6, -35, 4, 1, '#ffffff'); R(-7, -34, 2, 1, '#ffffff'); R(2, -35, 4, 1, '#ffffff'); R(5, -34, 2, 1, '#ffffff');
+  R(-4, -33, 2, 1, '#201010'); R(2, -33, 2, 1, '#201010');
+  // La longue barbe blanche, au vent
+  O(-5, -31, 10, 3, '#e8e8f0');
+  R(-4, -28, 8, 6, '#f4f4f8'); R(-3 + vent, -22, 6, 5, '#f4f4f8'); R(-2 + vent, -17, 4, 4, '#f4f4f8'); R(-1 + vent * 2, -13, 2, 3, '#f4f4f8');
+  R(-4, -28, 1, 6, '#c8c8d8'); R(-6, -31, 3, 2, '#e0e0e8'); R(3, -31, 3, 2, '#e0e0e8');
+  const k = Math.floor(t * 8) % 4;
+  etincelle(px + 11 * s, py - 43 * s, [1, 2, 3, 2][k], '#fff8c0');
+}
 // Le Général Constipax, en portrait : visage crispé, moustache, képi, médailles. (cx, cy) : le milieu du visage.
 function constipax(cx, cy, s, t, enerve, ko) {
   const tr = enerve ? Math.round(Math.sin(t * 30)) : 0;
@@ -1085,6 +1126,36 @@ const SCENES = {
     for (let i = 0; i < 12; i++) g.fillRect(Math.round(L - ((T * 220 + hasard(i) * 600) % (L + 60))), Math.round(20 + hasard(i + 3) * 180), 10 + Math.round(hasard(i + 5) * 16), 1);
     g.globalAlpha = 1;
     herosGrand(150, 300, 3, 1, { pose: 'debout', choco: true }, T * 1.8);
+  },
+  // « Même s'il n'en a pas beaucoup, ça dépend » : un coup de vent, le casque s'envole... calvitie !
+  calvitie(ts, T) {
+    rayons(160, 70, T * 0.25, '#3a1458', '#4e1c70', 16);
+    g.globalAlpha = 0.7; g.fillStyle = '#fff';
+    for (let i = 0; i < 18; i++) g.fillRect(Math.round(L - ((T * 320 + hasard(i) * 600) % (L + 60))), Math.round(20 + hasard(i + 3) * 180), 14 + Math.round(hasard(i + 5) * 20), 1);
+    g.globalAlpha = 1;
+    const lev = Math.max(0, Math.sin(ts * 2.6)) * 16;
+    herosGrand(150, 300, 3, 1, { pose: 'debout', choco: true, chauve: lev > 1 ? lev : 0 }, T * 2.4);
+    if (lev > 8) {
+      etincelle(150 + 0 * 3, 300 - 65 * 3, Math.floor(T * 12) % 2 ? 4 : 2);
+      texte('PING!', 205, 70, '#ffffff', 2, '#3a1458', 'c');
+    }
+  },
+  // « Un geste sacré hérité d'un vieux sensei extrême »
+  sensei(ts, T) {
+    ['#2a0a3a', '#4a1448', '#7a2048', '#b03a40', '#e06a38', '#f8a040'].forEach((c, i) => { g.fillStyle = c; g.fillRect(0, i * 22, L, 22); });
+    g.fillStyle = '#f8a040'; g.fillRect(0, 132, L, 92);
+    disque(g, 160, 128, 34, '#ffd870'); disque(g, 160, 128, 28, '#fff0b0');
+    g.fillStyle = '#3a1838';
+    for (let x = 0; x < L; x++) { const h = 40 + Math.abs(Math.sin(x * 0.021)) * 40 + Math.sin(x * 0.07) * 6; g.fillRect(x, Math.round(214 - h), 1, Math.round(h)); }
+    g.fillStyle = '#1e0c20'; g.fillRect(0, 196, L, 28);
+    // Le rayon du geste sacré, du pouce du sensei au pouce du héros
+    const p = Math.min(1, ts / 1.2);
+    g.globalAlpha = 0.55 + Math.sin(T * 12) * 0.2; g.fillStyle = '#fff6b0';
+    const x0 = 112 + 11 * 3, y0 = 200 - 43 * 3, x1 = 238 - 40, y1 = 100;
+    for (let k = 0; k <= 40 * p; k++) { const q = k / 40; g.fillRect(Math.round(x0 + (x1 - x0) * q), Math.round(y0 + (y1 - y0) * q) - 1, 3, 3); }
+    g.globalAlpha = 1;
+    sensei(112, 200, 3, T);
+    herosGrand(238, 204, 2, -1, { pose: 'coup', choco: p >= 1 }, T);
   },
   // « Il n'a qu'un pouvoir : le pouce suprême »
   pouce(ts, T) {
