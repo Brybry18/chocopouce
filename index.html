@@ -355,9 +355,14 @@ const PAL = {
   ceinture: '#7a4a1c', jaune: '#f8e040', choco: '#5a2808', chocoClair: '#a8642c', chaussure: '#5a3018', oeil: '#201828', bouche: '#8a2828',
 };
 const LETTRES_CP = { C: [15, 16, 16, 16, 15], P: [30, 17, 30, 16, 16] }; // 5 × 5
+// En civil (le début du clip) : veste marron, chemise blanche, jean ; ni cape, ni casque, ni « CP ».
+const PAL_COSTUME = PAL;
+const PAL_CIVIL = { ...PAL, costume: '#8a6446', costumeOmbre: '#5e422c', costumeClair: '#a8825e', jambe: '#4a5e92', jambeOmbre: '#34446e', ceinture: '#3a2a1a', jaune: '#b8b8c0' };
 
 // Le héros debout / en marche / en saut / en dash / en coup. (ox, oy) : ses pieds. f : 1 vers la droite, -1 vers la gauche.
+// e.civil : en civil, avant sa transformation.
 function dessinerHeros(x, ox, oy, f, e, t) {
+  const PAL = e.civil ? PAL_CIVIL : PAL_COSTUME;
   ox = Math.round(ox); oy = Math.round(oy);
   const R = (px, py, w, h, c) => { x.fillStyle = c; x.fillRect(f > 0 ? ox + px : ox - px - w, oy + py, w, h); };
   const O = (px, py, w, h, c) => { R(px - 1, py - 1, w + 2, h + 2, PAL.contour); R(px, py, w, h, c); };
@@ -369,6 +374,7 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   const hy = bob + sq; // décalage vertical du haut du corps
 
   // Cape : flotte au vent sur le côté, même à l'arrêt
+  if (!e.civil) {
   const nC = pose === 'dash' ? 24 : 18;
   const amp = pose === 'dash' ? 1.2 : pose === 'marche' ? 3 : 2.2;
   const cols = [];
@@ -380,6 +386,7 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   for (const c of cols) R(c.px, c.top - 1, 1, c.len + 2, PAL.contour);
   R(cols[nC - 1].px - 1, cols[nC - 1].top, 1, cols[nC - 1].len, PAL.contour);
   for (const c of cols) R(c.px, c.top, 1, c.len, c.ombre ? PAL.capeOmbre : PAL.cape);
+  }
 
   // Mèches blondes qui volent derrière la tête
   const meches = [];
@@ -413,9 +420,10 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   R(6 + pench, -45 + hy, 2, 16, PAL.costumeClair);
   R(-9 + pench, -28 + hy, 17, 3, PAL.ceinture);
   R(-1 + pench, -28 + hy, 3, 3, PAL.jaune);
-  // Les lettres ne sont pas retournées quand il regarde à gauche
+  // Les lettres ne sont pas retournées quand il regarde à gauche (en civil : la chemise blanche sous la veste)
   const cx = ox + f * (pench - 1);
-  [['C', -6], ['P', 0]].forEach(([l, dx]) => LETTRES_CP[l].forEach((ligne, j) => { for (let k = 0; k < 5; k++) if (ligne & (16 >> k)) { x.fillStyle = PAL.jaune; x.fillRect(cx + dx + k, oy - 42 + hy + j, 1, 1); } }));
+  if (e.civil) { R(1 + pench, -46 + hy, 4, 18, '#ecebe4'); R(1 + pench, -46 + hy, 1, 18, '#c8c6bc'); R(2 + pench, -44 + hy, 1, 1, '#8a8a90'); R(2 + pench, -38 + hy, 1, 1, '#8a8a90'); }
+  else [['C', -6], ['P', 0]].forEach(([l, dx]) => LETTRES_CP[l].forEach((ligne, j) => { for (let k = 0; k < 5; k++) if (ligne & (16 >> k)) { x.fillStyle = PAL.jaune; x.fillRect(cx + dx + k, oy - 42 + hy + j, 1, 1); } }));
 
   // Cou, tête, visage
   R(-2 + pench, -49 + hy, 5, 3, PAL.peauOmbre);
@@ -442,11 +450,13 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   }
   // Petit casque
   const cy = hy - lev;
-  O(-6 + pench, -68 + cy, 12, 5, PAL.casque);
-  R(-3 + pench, -68 + cy, 4, 1, '#ffffff');
-  R(-1 + pench, -68 + cy, 2, 5, PAL.jaune);
-  R(-7 + pench, -64 + cy, 14, 1, PAL.casqueOmbre);
-  R(6 + pench, -64 + cy, 3, 1, PAL.casqueOmbre);
+  if (!e.civil) {
+    O(-6 + pench, -68 + cy, 12, 5, PAL.casque);
+    R(-3 + pench, -68 + cy, 4, 1, '#ffffff');
+    R(-1 + pench, -68 + cy, 2, 5, PAL.jaune);
+    R(-7 + pench, -64 + cy, 14, 1, PAL.casqueOmbre);
+    R(6 + pench, -64 + cy, 3, 1, PAL.casqueOmbre);
+  }
 
   // Bras avant, avec le pouce
   let pouce;
@@ -1368,19 +1378,49 @@ const OR = ['#ffffff', '#fff8d0', '#ffe890', '#ffd850', '#ffc830', '#ffb820', '#
 
 // ——— Les scènes ——— (ts : temps depuis le début de la scène, T : temps du clip)
 const SCENES = {
-  // « Quand la ville tremble et que le ciel devient rouge »
-  ville(ts, T) {
-    const k = Math.min(1, ts / 4);
-    const amp = Math.round(k * 3);
+  // L'intro musicale : un passant en civil marche dans la ville, la nuit (il trébuche un peu, il est maladroit).
+  // « Quand la ville tremble et que le ciel devient rouge » : il s'arrête, tourne sur lui-même dans un éclair
+  // de lumière et sort en costume, pouce levé, puis s'envole.
+  ville(ts, T, dt, intro) {
+    const t0 = CALAGE ? (calage[0] ?? T) : TEMPS_CLIP[0]; // le début de la première ligne chantée
+    const k = intro ? 0 : Math.min(1, ts / 4);           // le ciel rougit
+    const amp = intro ? 0 : Math.round(Math.min(1, ts / 2) * 3);
+    const tm = intro ? T : t0 + Math.min(ts, 1.5);        // il marche, puis s'arrête net
+    let hx = 40 + tm * 4, pose = 'marche', civil = true, f = 1, h = 0;
+    const trebuche = intro && T % 14 > 11 && T % 14 < 11.45;
+    if (trebuche) pose = 'atterrit';
+    if (!intro) {
+      if (ts > 1.5) pose = 'debout';
+      if (ts > 2.4 && ts < 3.4) f = Math.floor(ts / 0.07) % 2 ? 1 : -1; // il tourne sur lui-même
+      if (ts >= 3) civil = false;
+      if (ts >= 3.4) pose = 'coup';
+      if (ts >= 5.5) { pose = 'saut'; h = (ts - 5.5) ** 2 * 900; }
+    }
+    hx = Math.round(hx);
     g.save();
     if (amp) g.translate(Math.round((Math.random() * 2 - 1) * amp), Math.round((Math.random() * 2 - 1) * amp));
-    dessinerDecor(T * 18, T);
-    g.restore();
+    dessinerDecor(tm * 32, T);
     g.fillStyle = `rgba(16, 24, 80, ${0.7 * (1 - k)})`; g.fillRect(0, 0, L, H);
+    // La transformation : une colonne de lumière et des étincelles qui tournent autour de lui
+    if (!intro && ts > 2.2 && ts < 3.6) {
+      const p = Math.sin(((ts - 2.2) / 1.4) * Math.PI);
+      g.globalAlpha = 0.6 * p; g.fillStyle = '#fff8d0'; g.fillRect(hx - 14, 0, 28, 200);
+      g.globalAlpha = 1;
+      for (let n = 0; n < 8; n++) { const a = ts * 9 + (n * Math.PI) / 4; etincelle(hx + Math.cos(a) * 26, 160 + Math.sin(a) * 8 - n * 6, 2 + (n % 2), n % 2 ? '#ffe040' : '#ffffff'); }
+    }
+    ombre(hx, 196, h);
+    if (!intro && ts >= 5.5 && ts < 5.8) { g.fillStyle = '#fff'; for (const dx of [-16, -10, 10, 16]) g.fillRect(hx + dx, Math.round(150 - (ts - 5.5) * 300), 1, 40); }
+    dessinerHeros(g, hx, 196 - h, f, { pose, marche: tm * 9, civil, choco: !civil, vh: 1 }, T);
+    if (trebuche) texte('OUPS!', hx, 112, '#ffffff', 1, '#000', 'c');
+    if (!intro && ts > 1.5 && ts < 2.4) texte('!', hx + 3, 108, '#ff4040', 2, '#000', 'c');
+    if (!intro && ts >= 3.4 && ts < 5.5 && Math.floor(T * 6) % 3 === 0) etincelle(hx + 21, 196 - 52, 3);
     if (k > 0.3) for (let i = 0; i < 14; i++) {
       g.fillStyle = i % 2 ? '#5a4a4a' : '#8a6a5a';
       g.fillRect(Math.round((i * 37 + T * 9) % L), Math.round(40 + ((T * 90 + i * 53) % 150)), 2, 2);
     }
+    g.restore();
+    // L'éclair blanc au moment où le costume apparaît
+    if (!intro && ts >= 3 && ts < 3.35) { g.fillStyle = `rgba(255,255,255,${1 - (ts - 3) / 0.35})`; g.fillRect(0, 0, L, H); }
   },
   // « Un cri résonne, il arrive, Choco Pouce »
   arrivee(ts, T) {
@@ -1605,7 +1645,7 @@ function dessinerClip(T, dt) {
   while (j > 0 && CLIP[j - 1][0] === scene) j--;
   // Avant la première ligne chantée (l'intro musicale) : la ville calme, la nuit, encore bleue.
   const ts = i < 0 ? 0 : Math.max(0, T - temps[j]);
-  SCENES[scene](ts, T, dt);
+  SCENES[scene](ts, T, dt, i < 0);
   if (i > 0 && ts < 0.12) { g.fillStyle = `rgba(0,0,0,${1 - ts / 0.12})`; g.fillRect(0, 0, L, H); }
   if (i >= 0 && CLIP[i][1]) paroles(CLIP[i][1], T - temps[i]);
   if (CALAGE) {
