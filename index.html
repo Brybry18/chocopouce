@@ -872,11 +872,13 @@ const CLIP = [
   ['final', 'LE MONDE CHANTE SON NOM'],
   ['final', 'CHOCO POUCE !'],
 ];
-// Le moment (en secondes depuis le début du générique) où commence chaque ligne de CLIP.
-// En attendant le calage : les lignes réparties de 12 s (fin de l'intro musicale) à 250 s (la chanson dure
-// 4 min 21). Pour les caler pile sur la chanson, ouvrir « index.html?caler » (voir CALAGE plus bas) et
-// coller ici la liste obtenue.
-let TEMPS_CLIP = CLIP.map((_, i) => +(12 + (i * 238) / (CLIP.length - 1)).toFixed(1));
+// Le moment (en secondes depuis le début du générique) où commence chaque ligne de CLIP, calé à l'oreille
+// sur la chanson (novembre 2026). Pour le refaire (autre version de la chanson, lignes ajoutées) : ouvrir
+// « index.html?caler » (voir CALAGE plus bas) et coller ici la liste obtenue.
+let TEMPS_CLIP = [24.74, 31.17, 37.03, 49.32, 54.9, 59.63, 62.02, 73.4, 74.94, 77.04, 80.64, 81.16, 82.33, 92.36, 94.95,
+  95.86, 98.51, 100.97, 103.69, 105.51, 109.45, 123.16, 129.32, 135.43, 136.65, 142.09, 144.36, 150.84, 151.49, 157.04,
+  163.13, 163.64, 168.55, 171.63, 174.43, 177.6, 180.49, 185.79, 192.08, 198.77, 200.98, 206.27, 212.39, 233.5, 236.61,
+  237.36, 238.04];
 try {
   const c = JSON.parse(localStorage.getItem('chocopouce-calage') || 'null');
   if (Array.isArray(c) && c.length === CLIP.length) TEMPS_CLIP = c;
@@ -1330,9 +1332,10 @@ function dessinerClip(T, dt) {
   // Depuis quand cette scène est à l'écran (plusieurs lignes de suite peuvent la partager)
   let j = i;
   while (j > 0 && CLIP[j - 1][0] === scene) j--;
-  const ts = Math.max(0, T - (i < 0 ? 0 : temps[j]));
+  // Avant la première ligne chantée (l'intro musicale) : la ville calme, la nuit, encore bleue.
+  const ts = i < 0 ? 0 : Math.max(0, T - temps[j]);
   SCENES[scene](ts, T, dt);
-  if (ts < 0.12) { g.fillStyle = `rgba(0,0,0,${1 - ts / 0.12})`; g.fillRect(0, 0, L, H); }
+  if (i > 0 && ts < 0.12) { g.fillStyle = `rgba(0,0,0,${1 - ts / 0.12})`; g.fillRect(0, 0, L, H); }
   if (i >= 0 && CLIP[i][1]) paroles(CLIP[i][1], T - temps[i]);
   if (CALAGE) {
     g.fillStyle = 'rgba(0,0,0,0.75)'; g.fillRect(0, 0, L, 34);
