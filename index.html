@@ -551,6 +551,12 @@ const PALETTES_V = {
   voyou: PAL_V,
   voyou2: { ...PAL_V, peau: '#b87050', peauOmbre: '#8a4a34', barbe: '#3a2418', sweat: '#3e6a4a', sweatOmbre: '#284a32', casquette: '#2858c8', casquetteClair: '#5888f0', casquetteOmbre: '#183a8a', bande: '#2858c8' },
   caid: { ...PAL_V, peau: '#e0a080', peauOmbre: '#b07050', barbe: '#5a3a28', sweat: '#2a2a32', sweatOmbre: '#18181e', jean: '#2a2a2a', jeanOmbre: '#1a1a1a', basket: '#c8a030', bande: '#7a5a10', casquette: '#c81818', casquetteClair: '#e84040', casquetteOmbre: '#c81818', caid: true },
+  // Les sbires camouflés de la forêt : tenue kaki, capuche couverte de feuilles, visage peint
+  sbire: { ...PAL_V, contour: '#0e140a', peau: '#c08a60', peauOmbre: '#906040', barbe: '#2a3a1a', sweat: '#4a6a2a', sweatOmbre: '#2e4a1a', jean: '#3a4a2a', jeanOmbre: '#28361c', basket: '#3a2a1a', bande: '#2a1a0a', camo: true, feuille: '#6a9a3a' },
+  sbireVif: { ...PAL_V, contour: '#0e140a', peau: '#b07a50', peauOmbre: '#805030', barbe: '#3a2a1a', sweat: '#6a5a2a', sweatOmbre: '#4a3e1a', jean: '#4a3e22', jeanOmbre: '#342a16', basket: '#2a1a0a', bande: '#1a1008', camo: true, feuille: '#a8902a' },
+  // Les soldats du Général : uniforme vert, casque rond, bottes noires
+  soldat: { ...PAL_V, sweat: '#3a5a2a', sweatOmbre: '#2a4220', jean: '#2e4a22', jeanOmbre: '#203616', basket: '#141414', bande: '#141414', casquette: '#2e4a22', casquetteClair: '#4a6a32', casquetteOmbre: '#1a2a12', soldat: true },
+  soldatVif: { ...PAL_V, peau: '#b87050', peauOmbre: '#8a4a34', barbe: '#3a2418', sweat: '#3e4a5a', sweatOmbre: '#2a3240', jean: '#2e3644', jeanOmbre: '#1e2430', basket: '#141414', bande: '#141414', casquette: '#3e4a5a', casquetteClair: '#5a6a7a', casquetteOmbre: '#1e2430', soldat: true },
 };
 function dessinerVoyou(x, ox, oy, f, e, t) {
   const V = PALETTES_V[e.type] ?? PAL_V;
@@ -564,13 +570,20 @@ function dessinerVoyou(x, ox, oy, f, e, t) {
   O(-6 - Math.round(3 * p), -22, 6, 18, V.jeanOmbre); O(-7 - Math.round(3 * p), -4, 8, 4, V.basket); R(-7 - Math.round(3 * p), -3, 8, 1, V.bande);
   O(1 + Math.round(3 * p), -22, 6, 18, V.jean); O(1 + Math.round(3 * p), -4, 8, 4, V.basket); R(1 + Math.round(3 * p), -3, 8, 1, V.bande);
   O(-11 + rc, -42 + hy, 5, 16, V.sweatOmbre); O(-11 + rc, -27 + hy, 5, 4, V.peauOmbre);
-  if (!V.caid) O(-12 + rc, -50 + hy, 7, 9, V.sweatOmbre); // la capuche dans le dos
+  if (!V.caid && !V.soldat) O(-12 + rc, -50 + hy, 7, 9, V.sweatOmbre); // la capuche dans le dos
   O(-9 + rc, -44 + hy, 18, 24, V.sweat);
   R(-9 + rc, -44 + hy, 3, 24, V.sweatOmbre);
   if (V.caid) {
     // Blouson de cuir ouvert, maillot blanc, grosse chaîne en or
     R(1 + rc, -44 + hy, 5, 16, '#e8e8e8'); R(0 + rc, -44 + hy, 1, 18, '#4a4a56'); R(6 + rc, -44 + hy, 1, 18, '#4a4a56');
     R(0 + rc, -43 + hy, 7, 1, '#f0c840'); R(2 + rc, -42 + hy, 3, 1, '#f0c840'); R(3 + rc, -41 + hy, 1, 2, '#f0c840');
+  } else if (V.soldat) {
+    // Boutons dorés, ceinturon
+    for (const y of [-41, -36, -31]) R(4 + rc, y + hy, 2, 2, '#e8c040');
+    R(-9 + rc, -24 + hy, 18, 3, '#2a1a0a'); R(1 + rc, -24 + hy, 3, 3, '#c8a030');
+  } else if (V.camo) {
+    // Des feuilles accrochées à la tenue
+    for (const [a, b] of [[-6, -40], [2, -36], [-3, -30], [5, -26], [-8, -28]]) R(a + rc, b + hy, 3, 2, V.feuille);
   } else {
     R(-2 + rc, -30 + hy, 10, 5, V.sweatOmbre);
     R(4 + rc, -43 + hy, 1, 5, '#e8e8f0'); R(6 + rc, -43 + hy, 1, 4, '#e8e8f0');
@@ -588,6 +601,15 @@ function dessinerVoyou(x, ox, oy, f, e, t) {
     O(-6 + rc, -61 + hy, 12, 3, V.casquette); R(-6 + rc, -61 + hy, 12, 1, V.casquetteClair);
     R(-9 + rc, -60 + hy, 3, 1, V.casquette); R(-10 + rc, -59 + hy, 2, 2, V.casquette);
     R(1 + rc, -55 + hy, 6, 2, '#101014'); R(2 + rc, -55 + hy, 1, 1, '#8090a8');
+  } else if (V.camo) {
+    // Capuche couverte de feuilles, bandes de peinture sur le visage
+    O(-7 + rc, -63 + hy, 13, 7, V.sweat); R(-7 + rc, -58 + hy, 3, 8, V.sweat);
+    for (const [a, b] of [[-6, -64], [-2, -65], [2, -64], [-8, -60], [4, -62]]) R(a + rc, b + hy, 3, 2, V.feuille);
+    R(1 + rc, -52 + hy, 6, 1, '#2a3a1a'); R(2 + rc, -56 + hy, 4, 1, '#2a3a1a');
+  } else if (V.soldat) {
+    // Casque rond, jugulaire
+    O(-7 + rc, -64 + hy, 14, 6, V.casquette); R(-7 + rc, -64 + hy, 14, 1, V.casquetteClair);
+    R(-8 + rc, -59 + hy, 16, 1, V.casquetteOmbre); R(-1 + rc, -58 + hy, 1, 8, '#3a2a1a');
   } else {
     O(-6 + rc, -62 + hy, 12, 5, V.casquette); R(-6 + rc, -62 + hy, 12, 1, V.casquetteClair);
     O(6 + rc, -58 + hy, 6, 2, V.casquetteOmbre);
@@ -610,7 +632,10 @@ function dessinerEnnemi(e, t) {
     g.save(); g.translate(Math.round(sx), Math.round(sy)); g.rotate(angle); g.drawImage(tmpEnnemi, -45, -80); g.restore();
     return;
   }
+  // Les sbires camouflés se fondent dans la forêt tant qu'ils sont loin
+  if (PALETTES_V[e.type]?.camo && Math.abs(heros.x - e.x) > 110 && e.etat === 'marche') g.globalAlpha = 0.4;
   dessinerVoyou(g, sx, sy, e.f, { pose, marche: e.marche, type: e.type }, t);
+  g.globalAlpha = 1;
   // La barre de vie du Caïd, au-dessus de sa tête
   if (e.type === 'caid' && e.vie < e.vieMax) {
     g.fillStyle = PAL.contour; g.fillRect(Math.round(sx) - 13, Math.round(sy) - 70, 26, 4);
@@ -736,7 +761,172 @@ const proche = toile(512, H, (x) => {
     x.fillStyle = '#fff4b0'; x.fillRect(lx - 2, 58, 7, 2);
   }
 });
+// Le décor du monde en cours (la ville, la forêt ou le repaire)
 function dessinerDecor(cam, t) {
+  if (monde === 2) dessinerForet(cam, t);
+  else if (monde === 3) dessinerRepaire(cam, t);
+  else dessinerVille(cam, t);
+}
+const tuilesDecor = (c, cam, v, w, dy = 0) => { const dx = -Math.round(cam * v) % w; for (let k = dx; k < L; k += w) g.drawImage(c, k, dy); };
+
+// ——— Monde 2 : la forêt, au soleil couchant (collines et sapins au loin, la rivière, les grands arbres, le chemin) ———
+const cielForet = toile(L, H, (x) => {
+  const bandes = ['#1e1438', '#2c1a46', '#44204e', '#62284e', '#86344c', '#aa4a44', '#cc6a3c', '#e89040', '#f4b456'];
+  const hb = 14;
+  bandes.forEach((c, i) => {
+    x.fillStyle = c; x.fillRect(0, i * hb, L, hb);
+    if (i + 1 < bandes.length) { x.fillStyle = bandes[i + 1]; for (let k = 0; k < L; k += 2) { x.fillRect(k + (i % 2), i * hb + hb - 2, 1, 1); x.fillRect(k, i * hb + hb - 1, 1, 1); } }
+  });
+  x.fillStyle = bandes.at(-1); x.fillRect(0, bandes.length * hb, L, H);
+  disque(x, 232, 104, 21, '#ffd890'); disque(x, 232, 104, 16, '#fff0c0');
+});
+const loinForet = toile(640, H, (x) => {
+  const r = alea(5), tour = (Math.PI * 2) / 640;
+  x.fillStyle = '#2a3a5a';
+  for (let k = 0; k < 640; k++) { const h = 30 + Math.sin(k * tour * 3) * 12 + Math.sin(k * tour * 7 + 1) * 6; x.fillRect(k, Math.round(128 - h), 1, Math.round(h) + 2); }
+  x.fillStyle = '#1c2c40';
+  for (let k = 4; k < 636; k += 7 + (r() * 6 | 0)) {
+    const h = 14 + r() * 18;
+    for (let i = 0; i < h; i++) { const w = Math.round((i / h) * 5); x.fillRect(k - w, Math.round(130 - h + i), w * 2 + 1, 1); }
+  }
+  // La rivière, avec ses reflets
+  x.fillStyle = '#3a6a9a'; x.fillRect(0, 128, 640, 14); x.fillStyle = '#5a8ab8'; x.fillRect(0, 128, 640, 2);
+  x.fillStyle = '#8ab8e0'; for (let i = 0; i < 70; i++) x.fillRect(r() * 636 | 0, 131 + (r() * 9 | 0), 3 + (r() * 6 | 0), 1);
+  x.fillStyle = '#24402a'; x.fillRect(0, 140, 640, 2);
+});
+const milieuForet = toile(640, H, (x) => {
+  const r = alea(8);
+  for (let i = 0; i < 70; i++) disque(x, 14 + (r() * 612 | 0), (r() * 40 | 0) - 6, 14 + (r() * 14 | 0), i % 3 ? '#1a3a22' : '#24502c');
+  for (let k = 20; k < 600; k += 60 + (r() * 50 | 0)) {
+    const w = 12 + (r() * 12 | 0);
+    x.fillStyle = '#2a1a12'; x.fillRect(k, 10, w, 132);
+    x.fillStyle = '#3e2818'; x.fillRect(k + 2, 10, w - 6, 132);
+    x.fillStyle = '#1a100a'; for (let y = 20; y < 136; y += 9) x.fillRect(k + 3 + (y % 4), y, 2, 4);
+    x.fillStyle = '#2a1a12'; x.fillRect(k - 3, 134, w + 6, 8);
+    if (r() < 0.6) x.fillRect(k + w, 50 + (r() * 30 | 0), 14, 3);
+  }
+  for (let i = 0; i < 40; i++) disque(x, 8 + (r() * 624 | 0), 140 + (r() * 4 | 0), 6 + (r() * 6 | 0), i % 2 ? '#1e4426' : '#2a5a30');
+});
+const procheForet = toile(512, H, (x) => {
+  const r = alea(13);
+  x.fillStyle = '#2e5a24'; x.fillRect(0, 142, 512, 10);
+  x.fillStyle = '#3e7a2e'; for (let k = 0; k < 512; k += 3) x.fillRect(k, 140 + (r() * 4 | 0), 1, 4);
+  x.fillStyle = '#6a4a2a'; x.fillRect(0, 152, 512, 72);
+  x.fillStyle = '#7a5a34'; for (let i = 0; i < 400; i++) x.fillRect(r() * 512 | 0, 152 + (r() * 72 | 0), 2, 1);
+  x.fillStyle = '#4a321c'; for (let i = 0; i < 200; i++) x.fillRect(r() * 512 | 0, 152 + (r() * 72 | 0), 1, 1);
+  x.fillStyle = '#5a3e22'; x.fillRect(0, 176, 512, 2); x.fillRect(0, 202, 512, 2);
+  x.fillStyle = '#2e5a24'; x.fillRect(0, 218, 512, 6); x.fillStyle = '#3e7a2e'; for (let k = 0; k < 512; k += 4) x.fillRect(k, 214 + (r() * 4 | 0), 1, 6);
+  for (const [mx, my] of [[60, 146], [300, 147], [430, 145]]) { x.fillStyle = '#e8e0d0'; x.fillRect(mx, my, 2, 3); x.fillStyle = '#d02828'; x.fillRect(mx - 2, my - 2, 6, 2); x.fillStyle = '#fff'; x.fillRect(mx, my - 2, 1, 1); }
+});
+function dessinerForet(cam, t) {
+  g.drawImage(cielForet, 0, 0);
+  tuilesDecor(loinForet, cam, 0.25, 640);
+  // Les reflets qui bougent sur la rivière
+  g.fillStyle = '#c8e8ff';
+  for (let i = 0; i < 8; i++) g.fillRect(Math.round((i * 47 + t * 18 - cam * 0.25) % L + L) % L, 131 + (i * 3) % 9, 4, 1);
+  tuilesDecor(milieuForet, cam, 0.5, 640);
+  // La lumière du soir à travers les feuilles
+  g.globalAlpha = 0.08; g.fillStyle = '#fff0a0';
+  for (let i = 0; i < 3; i++) { const bx = ((i * 140 - cam * 0.5) % 420 + 420) % 420 - 60 + Math.sin(t * 0.4 + i) * 6; g.beginPath(); g.moveTo(bx, 0); g.lineTo(bx + 24, 0); g.lineTo(bx + 84, 150); g.lineTo(bx + 44, 150); g.fill(); }
+  g.globalAlpha = 1;
+  tuilesDecor(procheForet, cam, 1, 512);
+  // Des lucioles, et des feuilles qui tombent
+  for (let i = 0; i < 10; i++) {
+    if (Math.sin(t * 3 + i * 2.7) < 0.2) continue;
+    g.fillStyle = '#f8f080';
+    g.fillRect(Math.round((i * 53 + Math.sin(t + i) * 20 - cam * 0.6) % L + L) % L, Math.round(70 + i * 7 + Math.sin(t * 1.3 + i) * 8), 1, 1);
+  }
+  for (let i = 0; i < 6; i++) {
+    g.fillStyle = i % 2 ? '#c86a2a' : '#8aa83a';
+    g.fillRect(Math.round((i * 61 + Math.sin(t * 1.5 + i) * 14 - cam * 0.8) % L + L) % L, Math.round((t * 22 + i * 37) % 150), 2, 1);
+  }
+}
+
+// ——— Monde 3 : le repaire du Général Constipax (usines et cheminées, forteresse de métal, alarmes, fumée verdâtre) ———
+const cielRepaire = toile(L, H, (x) => {
+  const bandes = ['#060806', '#0a0e0a', '#0e140e', '#121c12', '#16261a', '#1c321e', '#22401f', '#2a4e22'];
+  const hb = 16;
+  bandes.forEach((c, i) => {
+    x.fillStyle = c; x.fillRect(0, i * hb, L, hb);
+    if (i + 1 < bandes.length) { x.fillStyle = bandes[i + 1]; for (let k = 0; k < L; k += 2) x.fillRect(k + (i % 2), i * hb + hb - 1, 1, 1); }
+  });
+  x.fillStyle = bandes.at(-1); x.fillRect(0, bandes.length * hb, L, H);
+});
+const CHEMINEES = [[60, 40], [190, 30], [330, 46], [470, 34], [580, 42]]; // x et haut, dans le calque du fond
+const loinRepaire = toile(640, H, (x) => {
+  const r = alea(31);
+  x.fillStyle = '#121a14';
+  let px = 0;
+  while (px < 600) {
+    const w = 40 + (r() * 60 | 0), h = 30 + (r() * 50 | 0);
+    if (px + w > 640) break;
+    x.fillRect(px, 140 - h, w, h + 4);
+    for (let k = px; k < px + w - 11; k += 12) for (let i = 0; i < 8; i++) x.fillRect(k + i, 140 - h - i, 12 - i, 1);
+    px += w + 4;
+  }
+  for (const [cx, top] of CHEMINEES) { x.fillStyle = '#0e1410'; x.fillRect(cx, top, 10, 140 - top); x.fillStyle = '#a01818'; x.fillRect(cx, top + 6, 10, 2); }
+  for (let i = 0; i < 60; i++) { x.fillStyle = r() < 0.5 ? '#4a8a3a' : '#2a4a22'; x.fillRect(r() * 638 | 0, 100 + (r() * 36 | 0), 2, 2); }
+});
+const LAMPES_REPAIRE = [70, 250, 430, 590]; // les lampes d'alarme, dans le calque du milieu
+const milieuRepaire = toile(640, H, (x) => {
+  x.fillStyle = '#2e3238'; x.fillRect(0, 56, 640, 86);
+  x.fillStyle = '#1e2126'; for (let k = 0; k < 640; k += 40) x.fillRect(k, 56, 2, 86); x.fillRect(0, 98, 640, 2);
+  x.fillStyle = '#4a4e56'; for (let k = 4; k < 640; k += 40) for (const y of [60, 94, 104, 136]) { x.fillRect(k, y, 2, 2); x.fillRect(k + 32, y, 2, 2); }
+  x.fillStyle = '#3e4248'; x.fillRect(0, 56, 640, 2);
+  x.fillStyle = '#3a4a3a'; x.fillRect(0, 70, 640, 8); x.fillStyle = '#5a6a5a'; x.fillRect(0, 70, 640, 2);
+  x.fillStyle = '#2a362a'; for (let k = 0; k < 640; k += 64) x.fillRect(k, 68, 6, 12);
+  x.fillStyle = '#4a3a2a'; x.fillRect(0, 112, 640, 5); x.fillStyle = '#6a5a3a'; x.fillRect(0, 112, 640, 1);
+  for (let k = 0; k < 640; k += 16) { x.fillStyle = '#e8c020'; x.fillRect(k, 128, 8, 8); x.fillStyle = '#141414'; x.fillRect(k + 8, 128, 8, 8); }
+  for (const dx of [150, 520]) {
+    x.fillStyle = '#1a1c20'; x.fillRect(dx, 84, 36, 44); x.fillStyle = '#3a3e44'; x.fillRect(dx + 2, 86, 32, 40);
+    x.fillStyle = '#1a1c20'; x.fillRect(dx + 17, 86, 2, 40); x.fillStyle = '#e8c020'; x.fillRect(dx + 2, 86, 32, 2);
+  }
+  for (const lx of LAMPES_REPAIRE) { x.fillStyle = '#141414'; x.fillRect(lx - 4, 50, 9, 6); }
+  // L'affiche du Général, à sa propre gloire
+  x.fillStyle = '#5a1010'; x.fillRect(330, 80, 50, 40); x.fillStyle = '#7a1818'; x.fillRect(332, 82, 46, 36);
+  x.fillStyle = '#e89878'; x.fillRect(346, 92, 18, 16); x.fillStyle = '#2e4a22'; x.fillRect(344, 87, 22, 6); x.fillStyle = '#e8c040'; x.fillRect(344, 91, 22, 1);
+  x.fillStyle = '#4a3a2a'; x.fillRect(348, 102, 14, 2); x.fillStyle = '#3a2a1a'; x.fillRect(349, 96, 4, 1); x.fillRect(357, 96, 4, 1);
+  x.drawImage(rendreTexte('CONSTIPAX', '#e8c040', 1, '#3a0808'), 328, 112);
+});
+const procheRepaire = toile(512, H, (x) => {
+  x.fillStyle = '#24272c'; x.fillRect(0, 142, 512, 82);
+  x.fillStyle = '#16181c'; for (let k = 0; k < 512; k += 8) x.fillRect(k, 142, 1, 82); for (let y = 142; y < 224; y += 8) x.fillRect(0, y, 512, 1);
+  x.fillStyle = '#3a3e44'; x.fillRect(0, 142, 512, 2);
+  for (let k = 0; k < 512; k += 12) { x.fillStyle = '#e8c020'; x.fillRect(k, 146, 6, 3); }
+  for (const [px, py, w] of [[80, 190, 30], [300, 206, 24], [430, 172, 20]]) {
+    x.fillStyle = '#2a6a2a'; x.fillRect(px, py, w, 4); x.fillRect(px + 3, py - 1, w - 6, 6); x.fillStyle = '#5ab84a'; x.fillRect(px + 4, py, 5, 1);
+  }
+});
+function dessinerRepaire(cam, t) {
+  g.drawImage(cielRepaire, 0, 0);
+  tuilesDecor(loinRepaire, cam, 0.25, 640);
+  // La fumée verdâtre des cheminées
+  for (const [cx, top] of CHEMINEES) for (let n = -1; n <= 1; n++) {
+    const sx = Math.round(cx + 5 - cam * 0.25 + Math.floor(cam * 0.25 / 640) * 640 + n * 640);
+    if (sx < -40 || sx > L + 40) continue;
+    for (let k = 0; k < 5; k++) {
+      const c = (t * 0.25 + k / 5 + cx * 0.01) % 1;
+      g.globalAlpha = 0.45 * (1 - c);
+      disque(g, sx + Math.round(c * 26 + Math.sin(t + k) * 3), Math.round(top - c * 46), Math.round(3 + c * 9), k % 2 ? '#4a7a3a' : '#5a8a44');
+    }
+  }
+  g.globalAlpha = 1;
+  tuilesDecor(milieuRepaire, cam, 0.5, 640);
+  // Les alarmes rouges qui tournent
+  for (const lx of LAMPES_REPAIRE) for (let n = -1; n <= 1; n++) {
+    const sx = Math.round(lx - cam * 0.5 + Math.floor(cam * 0.5 / 640) * 640 + n * 640);
+    if (sx < -40 || sx > L + 40) continue;
+    const allume = Math.sin(t * 6 + lx) > 0;
+    g.fillStyle = allume ? '#ff3030' : '#701010'; g.fillRect(sx - 3, 46, 7, 4);
+    if (allume) { g.globalAlpha = 0.18; disque(g, sx, 48, 16, '#ff2020'); g.globalAlpha = 1; }
+  }
+  tuilesDecor(procheRepaire, cam, 1, 512);
+  // Un voile rouge quand l'alarme hurle
+  g.globalAlpha = Math.max(0, Math.sin(t * 3)) * 0.06; g.fillStyle = '#ff0000'; g.fillRect(0, 0, L, H); g.globalAlpha = 1;
+}
+
+// ——— Monde 1 : la ville ———
+function dessinerVille(cam, t) {
   g.drawImage(ciel, 0, 0);
   const tuiles = (c, v, w) => { const dx = -Math.round(cam * v) % w; for (let k = dx; k < L; k += w) g.drawImage(c, k, 0); };
   tuiles(loin, 0.25, 640);
@@ -755,11 +945,12 @@ function dessinerDecor(cam, t) {
 }
 
 // =====================================================================================
-//  Le monde 1 : la ville en chaos
+//  Les trois mondes : la ville en chaos, la forêt, le repaire du Général Constipax
 // =====================================================================================
 const ZMIN = 150, ZMAX = 216; // profondeur où l'on marche (le bas des pieds à l'écran)
 let heros, cam, particules, effets, secousse, score, debutJeu;
-let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT, pigeons;
+let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT, pigeons, obstacles;
+let monde = 1, sauvegarde = null, boss = null, bossFait = false;
 // Les vagues du monde 1 : quand le héros arrive à x, la caméra s'arrête et ces voyous arrivent, un par un,
 // des deux côtés de l'écran. La dernière vague amène le Caïd, le chef de la bande.
 const VAGUES_MONDE1 = [
@@ -771,13 +962,51 @@ const VAGUES_MONDE1 = [
 // Le décor vivant de la rue : pigeons sur la corniche (ils saluent ChocoPouce), barils en feu, bouches d'égout qui fument
 const BARILS_MONDE1 = [540, 1330, 2060, 2820];
 const EGOUTS_MONDE1 = [800, 1560, 2300];
+// Monde 2 : des sbires camouflés surgissent des buissons ; des troncs en travers du chemin et des rochers à sauter.
+const VAGUES_MONDE2 = [
+  { x: 420, ennemis: ['sbire', 'sbire'] },
+  { x: 1100, ennemis: ['sbire', 'sbireVif', 'sbire'] },
+  { x: 1900, ennemis: ['sbireVif', 'sbire', 'sbireVif', 'sbire'] },
+  { x: 2700, ennemis: ['sbire', 'sbireVif', 'sbireVif', 'sbire', 'sbireVif'] },
+];
+const OBSTACLES_MONDE2 = [
+  { type: 'tronc', x: 760 }, { type: 'rocher', x: 900, z: 168 }, { type: 'rocher', x: 1290, z: 200 }, { type: 'tronc', x: 1560 },
+  { type: 'rocher', x: 2060, z: 182 }, { type: 'tronc', x: 2380 }, { type: 'rocher', x: 2560, z: 160 }, { type: 'rocher', x: 2950, z: 206 }, { type: 'tronc', x: 3150 },
+];
+// Monde 3 : les soldats du Général, puis le Général lui-même (le combat commence quand le héros arrive à « boss »).
+const VAGUES_MONDE3 = [
+  { x: 400, ennemis: ['soldat', 'soldat'] },
+  { x: 1050, ennemis: ['soldat', 'soldatVif', 'soldat'] },
+  { x: 1700, ennemis: ['soldatVif', 'soldat', 'soldatVif', 'soldat'] },
+];
+const MONDES = {
+  1: { titre: ['LA VILLE EN CHAOS'], couleurs: ['#ffd0d0', '#ff9090', '#ff6060', '#ff3030', '#e01818', '#b00808', '#900000'], longueur: REGLAGES.LONGUEUR_MONDE, vagues: VAGUES_MONDE1, obstacles: [] },
+  2: { titre: ['LA FORÊT'], couleurs: ['#e0ffd0', '#b8f0a0', '#90e070', '#68c848', '#48a830', '#308820', '#206810'], longueur: 3400, vagues: VAGUES_MONDE2, obstacles: OBSTACLES_MONDE2 },
+  3: { titre: ['LE REPAIRE DU', 'GÉNÉRAL CONSTIPAX'], couleurs: ['#d8ff80', '#b8f060', '#98e040', '#78c830', '#58a820', '#408818', '#306810'], longueur: 2700, vagues: VAGUES_MONDE3, obstacles: [], boss: 2250 },
+};
+const longueur = () => MONDES[monde].longueur;
+// « index.html?monde=2 » commence directement au monde 2 (ou 3), pour essayer un monde sans refaire les autres.
+const MONDE_DEPART = Math.min(3, Math.max(1, Number(new URLSearchParams(location.search).get('monde')) || 1));
 function nouvellePartie() {
+  score = 0; jauge = 0; pouvoir = 0;
+  heros = { choco: false };
+  commencerMonde(MONDE_DEPART);
+}
+// Un monde commence : le héros repart avec toute sa vie ; le score, la jauge et le chocolat du pouce le suivent.
+// recommencer : après un game over, on reprend le monde tel qu'il était au départ.
+function commencerMonde(n, recommencer = false) {
+  monde = n;
+  if (recommencer && sauvegarde) ({ score, jauge, pouvoir } = sauvegarde);
+  const choco = recommencer && sauvegarde ? sauvegarde.choco : heros.choco;
+  sauvegarde = { score, jauge, pouvoir, choco };
   heros = { x: 70, z: 190, h: 0, vh: 0, f: 1, marche: 0, dashT: 0, dashDir: 0, dashAir: false, coupT: 0, coupFait: true, atterT: 0,
-    blesseT: 0, invT: 0, vie: REGLAGES.VIE_HEROS, choco: false, fantomes: [] };
-  cam = 0; particules = []; effets = []; secousse = 0; score = 0; debutJeu = tJeu;
-  ennemis = []; jauge = 0; pouvoir = 0; vagues = VAGUES_MONDE1.map((v) => ({ ...v, ennemis: [...v.ennemis] })); vague = null; bloque = false; goT = 0; finT = 0;
+    blesseT: 0, invT: 0, vie: REGLAGES.VIE_HEROS, choco, fantomes: [] };
+  cam = 0; particules = []; effets = []; secousse = 0; debutJeu = tJeu;
+  ennemis = []; vagues = MONDES[n].vagues.map((v) => ({ ...v, ennemis: [...v.ennemis] })); vague = null; bloque = false; goT = 0; finT = 0;
+  obstacles = MONDES[n].obstacles.map((o) => ({ ...o }));
+  boss = null; bossFait = false;
   pigeons = [];
-  for (let x = 170, i = 0; x < REGLAGES.LONGUEUR_MONDE - 80; x += 150 + ((i * 97) % 140), i++) pigeons.push({ x, f: i % 3 ? -1 : 1, salut: 0, fait: false });
+  if (n === 1) for (let x = 170, i = 0; x < longueur() - 80; x += 150 + ((i * 97) % 140), i++) pigeons.push({ x, f: i % 3 ? -1 : 1, salut: 0, fait: false });
 }
 
 // ——— Les voyous (monde 1) ———
@@ -786,6 +1015,12 @@ const TYPES_ENNEMIS = {
   voyou2: { vitesse: 42, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.85, portee: 30, preparation: 0.45, recharge: 1.3, degats: () => REGLAGES.DEGATS_ENNEMI },
   // Le Caïd : deux fois plus de coups, frappe plus fort, mais très lent à se retourner
   caid: { vitesse: 30, vie: () => REGLAGES.COUPS_POUR_TUER * 2, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 1.3, portee: 32, preparation: 0.6, recharge: 1.6, degats: () => REGLAGES.DEGATS_ENNEMI * 1.5 },
+  // Monde 2 : les sbires camouflés, plus rapides ; les « vifs » se retournent très vite (plus dur de les prendre de dos)
+  sbire: { vitesse: 50, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.75, portee: 30, preparation: 0.42, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI, buisson: true },
+  sbireVif: { vitesse: 56, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.45, portee: 30, preparation: 0.4, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI, buisson: true },
+  // Monde 3 : les soldats du Général
+  soldat: { vitesse: 44, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.7, portee: 32, preparation: 0.42, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI * 1.25 },
+  soldatVif: { vitesse: 52, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.5, portee: 32, preparation: 0.38, recharge: 1.1, degats: () => REGLAGES.DEGATS_ENNEMI * 1.25 },
 };
 function nouvelEnnemi(type, x, z, f) {
   const vie = TYPES_ENNEMIS[type].vie();
@@ -801,6 +1036,42 @@ function majPigeons(dt) {
       if (actx) bip('square', 1200, 1500, 0.05, 0.05);
     }
   }
+}
+// Les obstacles de la forêt : un tronc couché en travers du chemin (il faut sauter), un rocher (sauter ou contourner).
+const HAUTEUR_OBSTACLE = { tronc: 14, rocher: 20 };
+function obstacleTouche(o, x, z) {
+  if (o.type === 'tronc') return Math.abs(x - (o.x + (z - ZMIN) * 0.3)) < 9;
+  return Math.abs(x - o.x) < 15 && Math.abs(z - o.z) < 9;
+}
+function hauteurObstacle(x, z) {
+  let h = 0;
+  for (const o of obstacles) if (obstacleTouche(o, x, z)) h = Math.max(h, HAUTEUR_OBSTACLE[o.type]);
+  return h;
+}
+function dessinerTronc(o) {
+  for (let z = ZMIN; z <= ZMAX; z += 2) {
+    const sx = Math.round(o.x + (z - ZMIN) * 0.3 - cam);
+    g.fillStyle = '#1e1208'; g.fillRect(sx - 9, z - 14, 18, 14);
+    g.fillStyle = '#5a3a1e'; g.fillRect(sx - 8, z - 13, 16, 12);
+    g.fillStyle = '#7a5230'; g.fillRect(sx - 8, z - 13, 16, 3);
+    g.fillStyle = '#3e2610'; g.fillRect(sx - 8, z - 4, 16, 3);
+    if (z % 10 === 0) { g.fillStyle = '#2e1c0c'; g.fillRect(sx - 4, z - 9, 6, 1); }
+  }
+  // Les deux bouts sciés, avec leurs cernes
+  for (const z of [ZMIN, ZMAX]) {
+    const sx = Math.round(o.x + (z - ZMIN) * 0.3 - cam);
+    disque(g, sx, z - 7, 8, '#1e1208'); disque(g, sx, z - 7, 7, '#c8a06a'); disque(g, sx, z - 7, 4, '#a07a48'); disque(g, sx, z - 7, 1, '#7a5a30');
+  }
+}
+function dessinerRocher(o) {
+  const sx = Math.round(o.x - cam);
+  g.fillStyle = 'rgba(10,0,20,0.4)'; g.fillRect(sx - 14, o.z - 2, 28, 4);
+  disque(g, sx, o.z - 10, 14, '#1a1a20');
+  disque(g, sx, o.z - 10, 13, '#5a5a64');
+  disque(g, sx - 3, o.z - 13, 8, '#7a7a86');
+  disque(g, sx - 5, o.z - 16, 3, '#9a9aa6');
+  g.fillStyle = '#4a6a2a'; g.fillRect(sx - 8, o.z - 23, 12, 3); g.fillRect(sx - 4, o.z - 24, 6, 1);
+  g.fillStyle = '#3a3a44'; g.fillRect(sx + 4, o.z - 8, 6, 1); g.fillRect(sx + 2, o.z - 4, 8, 1);
 }
 function majEnnemis(dt) {
   const hr = heros;
@@ -843,6 +1114,7 @@ function majEnnemis(dt) {
     e.x += mx * ty.vitesse * dt;
     e.z = Math.max(ZMIN, Math.min(ZMAX, e.z + Math.sign(mz) * ty.vitesse * 0.6 * dt));
     if (mx || mz) e.marche += dt * 9; else e.marche = 0;
+    e.h = hauteurObstacle(e.x, e.z); // ils enjambent les troncs et les rochers
   }
   ennemis = ennemis.filter((e) => !(e.etat === 'ko' && e.t > 1.3));
 }
@@ -863,6 +1135,191 @@ function frapper() {
       hr.x -= hr.f * 10;
     }
   }
+  // Le Général Constipax
+  const b = boss;
+  if (b && !['ko', 'entree'].includes(b.etat) && Math.abs(b.z - hr.z) < 14 && Math.abs(b.h - hr.h) < 50 && (b.x - hr.x) * hr.f > 0 && (b.x - hr.x) * hr.f < 44) toucherBoss();
+}
+// Le Général : dans le dos, un coup lui retire un point de vie. Le pouce CHOCO-NOISETTE, lui, fait mouche de n'importe
+// quel côté et lui retire la moitié de sa vie : chargé, ChocoPouce le met K.O. en quelques secondes (comme dans la chanson).
+function toucherBoss() {
+  const b = boss, hr = heros;
+  hr.choco = true;
+  const dansLeDos = Math.sign(hr.x - b.x) === -b.f;
+  let degats = 0;
+  if (pouvoir > 0) {
+    degats = Math.ceil(b.vieMax / 2);
+    pouvoir--; if (pouvoir === 0) jauge = 0;
+    texteFlottant('CHOCO-NOISETTE !', b.x, b.z, 96, '#ffe040', 1);
+    secousse = 0.3;
+  } else if (dansLeDos && b.etat !== 'colere') degats = 1;
+  else {
+    son('ting2');
+    texteFlottant('TING!', b.x - hr.f * 10, b.z, 56, '#e0f0ff', 0.5);
+    if (!b.bulle) b.bulle = { str: 'HO HO HO !', t: 0.9 };
+    hr.x -= hr.f * 12;
+    return;
+  }
+  b.vie = Math.max(0, b.vie - degats);
+  b.flash = 0.15;
+  son('impact'); secousse = Math.max(secousse, 0.1);
+  score += 200 * degats;
+  const hx = b.x - hr.f * 12, hy = 52;
+  for (let i = 0; i < 10; i++) particules.push({ x: hx, z: b.z, h: hy, vx: (Math.random() * 2 - 1) * 100, vh: Math.random() * 100, vie: 0.35, max: 0.35, c: i % 2 ? '#fff6a0' : '#ffffff', taille: 1 });
+  for (let i = 0; i < 6; i++) particules.push({ x: hx, z: b.z, h: hy, vx: hr.f * (30 + Math.random() * 60), vh: 20 + Math.random() * 60, vie: 0.5, max: 0.5, c: PAL.choco, taille: 2 });
+  effets.push({ type: 'eclat', x: hx, z: b.z, h: hy, t: 0, duree: 0.15 });
+  if (b.vie <= 0) {
+    b.etat = 'ko'; b.koT = 0; b.vx = hr.f * 70; b.koDir = hr.f;
+    son('ko'); secousse = 0.5;
+    score += 10000;
+    return;
+  }
+  const ph = phaseBoss();
+  if (ph !== b.phase) {
+    // Il change de phase : il enrage, fume des oreilles et repart plus vite
+    b.phase = ph; b.etat = 'colere'; b.t = 1.3;
+    b.bulle = { str: ph === 1 ? 'TU VAS VOIR !' : 'GRRRAAAH !', t: 1.4 };
+    son('aie'); secousse = 0.3;
+  }
+}
+
+// ——— Le boss : le Général Constipax ———
+// Il se retourne en permanence vers le héros (à peine le temps de passer derrière lui), fonce tête baissée et
+// s'assomme contre les bords de l'écran (c'est le moment de frapper dans le dos), et à partir de la phase 2 saute
+// pour écraser le sol (sauter pour éviter l'onde). Trois phases, de plus en plus rapides.
+const PHASES_BOSS = [
+  { vitesse: 46, retour: 0.42, recharge: 3.0, charge: 220 },
+  { vitesse: 62, retour: 0.3, recharge: 2.5, charge: 260 },
+  { vitesse: 80, retour: 0.2, recharge: 2.0, charge: 300 },
+];
+const phaseBoss = () => { const k = boss.vie / boss.vieMax; return k > 2 / 3 ? 0 : k > 1 / 3 ? 1 : 2; };
+function nouveauBoss() {
+  boss = { x: cam + L + 40, z: 186, h: 0, vh: 0, f: -1, vie: REGLAGES.VIE_BOSS, vieMax: REGLAGES.VIE_BOSS, etat: 'entree', t: 0, marche: 0,
+    tRetour: 0, recharge: 2.2, phase: 0, bulle: null, flash: 0, koT: 0, combat: 0 };
+}
+function majBoss(dt) {
+  const b = boss, hr = heros;
+  if (!b) return;
+  if (b.bulle) { b.bulle.t -= dt; if (b.bulle.t <= 0) b.bulle = null; }
+  if (b.flash > 0) b.flash -= dt;
+  if (b.etat !== 'ko' && b.etat !== 'entree') b.combat += dt; // le chrono du combat (gag : K.O. en moins de 5 s)
+  const P = PHASES_BOSS[b.phase];
+  const dx = hr.x - b.x, dz = hr.z - b.z, vers = Math.sign(dx) || b.f;
+  b.t -= dt;
+  if (b.etat === 'entree') {
+    b.x -= 50 * dt; b.marche += dt * 8;
+    if (b.x <= cam + L - 70) { b.etat = 'marche'; b.bulle = { str: 'GRRR !', t: 1.2 }; }
+  } else if (b.etat === 'marche') {
+    if (b.f !== vers) { b.tRetour += dt; if (b.tRetour >= P.retour) { b.f = vers; b.tRetour = 0; son('retourne'); } } else b.tRetour = 0;
+    let mx = 0, mz = 0;
+    if (b.f === vers && Math.abs(dx) > 46) mx = vers;
+    if (Math.abs(dz) > 4) mz = Math.sign(dz);
+    b.x += mx * P.vitesse * dt;
+    b.z = Math.max(ZMIN, Math.min(ZMAX, b.z + mz * P.vitesse * 0.5 * dt));
+    b.marche = mx || mz ? b.marche + dt * 8 : 0;
+    b.recharge -= dt;
+    if (b.recharge <= 0 && b.f === vers && hr.vie > 0) {
+      if (b.phase >= 1 && Math.random() < 0.4) { b.etat = 'saut'; b.vh = 330; son('saut'); }
+      else { b.etat = 'prepare'; b.t = 0.65; }
+    }
+  } else if (b.etat === 'prepare') {
+    if (b.t <= 0) { b.etat = 'charge'; b.t = 1.4; son('dash'); }
+  } else if (b.etat === 'charge') {
+    b.x += b.f * P.charge * dt; b.marche += dt * 16;
+    if (Math.abs(hr.x - b.x) < 24 && Math.abs(dz) < 12 && hr.h < 40) blesser(14, b.f);
+    if (Math.random() < 0.6) particules.push({ x: b.x - b.f * 10, z: b.z, h: 2, vx: -b.f * 40, vh: 15, vie: 0.4, max: 0.4, c: '#8a8a94', taille: 2, poussiere: true });
+    const bord = b.f > 0 ? cam + L - 18 : cam + 18;
+    if ((b.f > 0 && b.x >= bord) || (b.f < 0 && b.x <= bord)) {
+      // BONK : il s'assomme contre le bord, le dos tourné
+      b.x = bord; b.etat = 'etourdi'; b.t = 1.6 - b.phase * 0.25;
+      secousse = 0.3; son('boum');
+      texteFlottant('BONK!', b.x, b.z, 86, '#ffe040', 0.8);
+    } else if (b.t <= 0) { b.etat = 'etourdi'; b.t = 0.7; }
+  } else if (b.etat === 'saut') {
+    b.h += b.vh * dt; b.vh -= 700 * dt;
+    b.x += Math.sign(dx) * 60 * dt;
+    if (b.h <= 0 && b.vh < 0) {
+      b.h = 0; b.vh = 0; b.etat = 'marche'; b.recharge = P.recharge;
+      secousse = 0.35; son('boum');
+      effets.push({ type: 'onde', x: b.x, z: b.z, t: 0, duree: 0.5 });
+      if (hr.h < 8 && Math.abs(hr.x - b.x) < 110 && Math.abs(dz) < 26) blesser(10, Math.sign(hr.x - b.x) || 1);
+    }
+  } else if (b.etat === 'etourdi') {
+    if (b.t <= 0) { b.etat = 'marche'; b.recharge = P.recharge; }
+  } else if (b.etat === 'colere') {
+    if (b.t <= 0) { b.etat = 'marche'; b.recharge = 1; }
+  } else if (b.etat === 'ko') {
+    b.koT += dt; b.x += b.vx * dt; b.vx *= 0.94;
+    if (b.koT > 3 && etat === 'jeu') { bossFait = true; changerEtat('victoire'); son('pouvoir'); musiqueVictoire(); }
+  }
+  if (b.etat !== 'ko') b.x = Math.max(cam + 16, Math.min(cam + L - 16, b.x));
+}
+
+// Le Général en entier (combat) : grand, bedonnant, uniforme vert, képi, visage rouge de colère, grosse moustache.
+// (ox, oy) : ses pieds. Poses : marche, prepare, charge, etourdi, colere, saut.
+function dessinerGeneral(x, ox, oy, f, e, t) {
+  ox = Math.round(ox); oy = Math.round(oy);
+  const ct = '#10140a';
+  const R = (px, py, w, h, c) => { x.fillStyle = c; x.fillRect(f > 0 ? ox + px : ox - px - w, oy + py, w, h); };
+  const O = (px, py, w, h, c) => { R(px - 1, py - 1, w + 2, h + 2, ct); R(px, py, w, h, c); };
+  const pose = e.pose, p = pose === 'marche' || pose === 'charge' ? Math.sin(e.marche) : 0;
+  const tr = pose === 'colere' ? Math.round(Math.sin(t * 40)) : 0;
+  const rc = (pose === 'charge' ? 5 : pose === 'prepare' ? -3 : pose === 'etourdi' ? Math.round(Math.sin(t * 5) * 2) : 0) + tr;
+  const vert = '#3a5a2a', vertOmbre = '#2a4220', peau = e.phase >= 2 ? '#f07a68' : '#e89878';
+  // Bottes et jambes (bande rouge sur le pantalon)
+  O(-10 - Math.round(3 * p), -8, 10, 8, '#141414'); O(2 + Math.round(3 * p), -8, 10, 8, '#141414');
+  O(-9 - Math.round(3 * p), -30, 8, 22, vertOmbre); O(2 + Math.round(3 * p), -30, 8, 22, vert);
+  R(-3 - Math.round(3 * p), -30, 1, 22, '#c02020'); R(8 + Math.round(3 * p), -30, 1, 22, '#c02020');
+  // Bras arrière
+  O(-19 + rc, -62, 6, 22, vertOmbre); O(-19 + rc, -41, 6, 5, '#e8e8e8');
+  // Gros ventre, ceinturon, médailles, épaulettes
+  O(-14 + rc, -64, 28, 36, vert); O(6 + rc, -52, 12, 22, vert);
+  R(-14 + rc, -64, 4, 36, vertOmbre);
+  R(-14 + rc, -34, 32, 4, '#2a1a0a'); R(6 + rc, -34, 4, 4, '#e8c040');
+  [[-4, '#e83030'], [0, '#3070e8'], [4, '#e8c040']].forEach(([px, c]) => { R(px + rc, -58, 3, 4, c); R(px + rc, -54, 3, 2, '#e8c040'); });
+  O(-17 + rc, -66, 9, 3, '#e8c040'); for (let i = 0; i < 4; i++) R(-17 + rc + i * 2, -63, 1, 3, '#c89820');
+  // Tête rouge, veine sur la tempe, sourcils froncés, grosse moustache, dents serrées
+  O(-8 + rc, -82, 18, 18, peau);
+  R(-8 + rc, -82, 3, 18, '#c87060');
+  R(-5 + rc, -78, 1, 3, '#a03050'); R(-4 + rc, -79, 2, 1, '#a03050');
+  if (pose === 'etourdi') { R(5 + rc, -76, 2, 1, '#000'); R(6 + rc, -75, 1, 1, '#000'); R(9 + rc, -76, 2, 1, '#000'); }
+  else { R(5 + rc, -76, 5, 2, '#fff'); R(8 + rc, -76, 2, 2, '#000'); }
+  R(3 + rc, -79, 3, 2, '#3a2a1a'); R(6 + rc, -78, 3, 2, '#3a2a1a'); R(9 + rc, -77, 2, 2, '#3a2a1a');
+  R(10 + rc, -74, 4, 4, '#d07860');
+  R(3 + rc, -70, 11, 3, '#4a3a2a'); R(2 + rc, -68, 3, 3, '#4a3a2a'); R(12 + rc, -68, 3, 3, '#4a3a2a');
+  R(5 + rc, -66, 7, 2, '#ffffff'); R(7 + rc, -66, 1, 2, '#909090'); R(10 + rc, -66, 1, 2, '#909090');
+  R(-2 + rc, -72, 4, 2, '#e05050');
+  // Képi
+  O(-10 + rc, -92, 20, 10, '#2e4a22'); R(-10 + rc, -92, 20, 2, '#4a6a32');
+  R(-10 + rc, -86, 20, 2, '#e8c040'); O(8 + rc, -83, 8, 2, '#1a2a12'); R(0 + rc, -91, 3, 3, '#ffe040');
+  // Bras avant
+  if (pose === 'charge') { O(8 + rc, -58, 18, 6, vert); O(26 + rc, -59, 7, 7, '#e8e8e8'); }
+  else if (pose === 'prepare' || pose === 'colere') { O(4 + rc, -74, 6, 16, vert); O(3 + rc, -80, 8, 7, '#e8e8e8'); }
+  else { O(8 + rc + Math.round(2 * p), -62, 6, 22, vert); O(8 + rc + Math.round(2 * p), -41, 6, 5, '#e8e8e8'); }
+}
+const tmpBoss = toile(120, 110);
+function dessinerBoss(t) {
+  const b = boss, sx = b.x - cam, sy = b.z - b.h;
+  if (b.etat === 'ko') {
+    if (b.koT > 2.4 && Math.floor(b.koT * 16) % 2) return;
+    const c = tmpBoss.getContext('2d');
+    c.clearRect(0, 0, 120, 110);
+    dessinerGeneral(c, 60, 104, b.f, { pose: 'etourdi', phase: 2 }, t);
+    const angle = Math.min(1, b.koT / 0.4) * (Math.PI / 2) * (b.koDir || 1);
+    g.save(); g.translate(Math.round(sx), Math.round(sy)); g.rotate(angle); g.drawImage(tmpBoss, -60, -104); g.restore();
+    for (let i = 0; i < 3; i++) { const a = t * 5 + (i * Math.PI * 2) / 3; etincelle(sx + (b.koDir || 1) * 70 + Math.cos(a) * 14, sy - 14 + Math.sin(a) * 5, 2, '#ffe040'); }
+    return;
+  }
+  if (b.flash > 0 && Math.floor(b.flash * 40) % 2) g.globalAlpha = 0.5;
+  dessinerGeneral(g, sx, sy, b.f, { pose: b.etat === 'entree' ? 'marche' : b.etat, marche: b.marche, phase: b.phase }, t);
+  g.globalAlpha = 1;
+  // Étoiles autour de la tête quand il est assommé ; fumée verte quand il enrage
+  if (b.etat === 'etourdi') for (let i = 0; i < 3; i++) { const a = t * 6 + (i * Math.PI * 2) / 3; etincelle(sx + Math.cos(a) * 14, sy - 98 + Math.sin(a) * 4, 2, '#ffe040'); }
+  if (b.etat === 'colere' || b.phase === 2) for (let i = 0; i < 4; i++) {
+    const k = (t * 1.2 + i / 4) % 1;
+    g.globalAlpha = 0.6 * (1 - k); disque(g, Math.round(sx + (i % 2 ? 10 : -10) + (i % 2 ? 1 : -1) * k * 14), Math.round(sy - 74 - k * 26), Math.round(2 + k * 5), '#7ac850');
+  }
+  g.globalAlpha = 1;
+  if (b.bulle) texte(b.bulle.str, sx, sy - 108, '#ffffff', 1, '#3a0808', 'c');
 }
 function toucher(e) {
   const hr = heros;
@@ -920,7 +1377,15 @@ function majVagues(dt) {
       if (vague.prochain <= 0) {
         const type = vague.ennemis.shift();
         const cote = vague.ennemis.length % 2 ? 1 : -1;
-        ennemis.push(nouvelEnnemi(type, cote > 0 ? cam + L + 24 : cam - 24, ZMIN + 8 + Math.random() * (ZMAX - ZMIN - 14), -cote));
+        if (TYPES_ENNEMIS[type].buisson) {
+          // Les sbires camouflés surgissent des buissons du fond, dans une gerbe de feuilles
+          let x = cam + 40 + Math.random() * (L - 80);
+          if (Math.abs(x - heros.x) < 60) x = heros.x + (x < heros.x ? -70 : 70);
+          const e = nouvelEnnemi(type, x, ZMIN + 2, Math.sign(heros.x - x) || 1);
+          ennemis.push(e);
+          for (let i = 0; i < 14; i++) particules.push({ x, z: ZMIN + 2, h: 10 + Math.random() * 30, vx: (Math.random() * 2 - 1) * 70, vh: 30 + Math.random() * 60, vie: 0.7, max: 0.7, c: i % 2 ? '#4a8a2a' : '#7ab83a', taille: 2 });
+          e.alerte = 0.6;
+        } else ennemis.push(nouvelEnnemi(type, cote > 0 ? cam + L + 24 : cam - 24, ZMIN + 8 + Math.random() * (ZMAX - ZMIN - 14), -cote));
         if (type === 'caid') { texteFlottant('LE CAÏD !', cam + L / 2, 120, 0, '#ff4040', 2); son('retourne'); secousse = 0.2; }
         vague.prochain = 0.9;
       }
@@ -929,10 +1394,16 @@ function majVagues(dt) {
       goT = 2.5; son('go');
     }
   }
-  if (!vague && vagues.every((w) => w.faite) && heros.x > REGLAGES.LONGUEUR_MONDE - 60 && etat === 'jeu') { changerEtat('fin'); finT = 0; son('pouvoir'); }
+  if (vague || !vagues.every((w) => w.faite) || etat !== 'jeu') return;
+  const m = MONDES[monde];
+  // Le repaire : arrivé au bout, le Général l'attend
+  if (m.boss) {
+    if (!boss && !bossFait && heros.x >= m.boss) { bloque = true; goT = 0; changerEtat('bossIntro'); son('gameover'); }
+  } else if (heros.x > longueur() - 60) { changerEtat('fin'); finT = 0; son('pouvoir'); }
 }
 function majHeros(dt) {
   const hr = heros, auSol = hr.h <= 0 && hr.vh <= 0;
+  const avantX = hr.x, avantZ = hr.z;
   // Dash : double appui sur une direction
   if (dashDemande) {
     if (hr.dashT <= 0 && (auSol || !hr.dashAir)) {
@@ -988,10 +1459,19 @@ function majHeros(dt) {
       for (let i = 0; i < 12; i++) { const s = i % 2 ? 1 : -1; particules.push({ x: hr.x + s * (4 + Math.random() * 10), z: hr.z + (Math.random() * 4 - 2), h: 1, vx: s * (25 + Math.random() * 55), vh: 10 + Math.random() * 28, vie: 0.45, max: 0.45, c: Math.random() < 0.5 ? '#c8b8a8' : '#8a7a6a', taille: 2, poussiere: true }); }
     }
   }
-  hr.x = Math.max(cam + 12, Math.min(REGLAGES.LONGUEUR_MONDE - 12, bloque ? cam + L - 14 : Infinity, hr.x));
+  hr.x = Math.max(cam + 12, Math.min(longueur() - 12, bloque ? cam + L - 14 : Infinity, hr.x));
   hr.z = Math.max(ZMIN, Math.min(ZMAX, hr.z));
+  // Les troncs et les rochers arrêtent le héros s'il ne saute pas assez haut (atterri dessus : il glisse et descend)
+  if (obstacles.length && hr.h < hauteurObstacle(hr.x, hr.z)) {
+    if (!hauteurObstacle(avantX, avantZ)) {
+      if (!hauteurObstacle(avantX, hr.z)) hr.x = avantX;
+      else if (!hauteurObstacle(hr.x, avantZ)) hr.z = avantZ;
+      else { hr.x = avantX; hr.z = avantZ; }
+      hr.dashT = 0;
+    } else hr.x += hr.f * 2;
+  }
   // La caméra suit vers l'avant seulement, comme dans les beat'em up ; elle s'arrête pendant une vague
-  const cible = Math.min(hr.x - 130, REGLAGES.LONGUEUR_MONDE - L);
+  const cible = Math.min(hr.x - 130, longueur() - L);
   if (cible > cam && !bloque) cam += (cible - cam) * Math.min(1, dt * 6);
   for (const f of hr.fantomes) f.vie -= dt;
   hr.fantomes = hr.fantomes.filter((f) => f.vie > 0).slice(-6);
@@ -1023,6 +1503,22 @@ function ombre(sx, z, h) {
 }
 // La rue qui vit : bouches d'égout qui fument, barils en feu contre les façades, pigeons sur la corniche.
 function dessinerRue(t) {
+  // Forêt : les troncs couchés en travers du chemin (les rochers, eux, se rangent avec les personnages)
+  if (monde === 2) { for (const o of obstacles) if (o.type === 'tronc' && Math.abs(o.x - cam - L / 2) < L) dessinerTronc(o); return; }
+  // Repaire : des bouches de vapeur verte dans le sol
+  if (monde === 3) {
+    for (let k = 0; k < 6; k++) {
+      const vx = 300 + k * 410, sx = Math.round(vx - cam);
+      if (sx < -40 || sx > L + 40) continue;
+      g.fillStyle = '#0e1012'; g.fillRect(sx - 8, 176, 16, 5); g.fillStyle = '#3a3e44'; for (let i = -6; i <= 6; i += 3) g.fillRect(sx + i, 177, 1, 3);
+      if (Math.sin(t * 1.5 + k) > 0) for (let i = 0; i < 4; i++) {
+        const c = (t * 0.9 + i / 4) % 1;
+        g.globalAlpha = 0.4 * (1 - c); disque(g, Math.round(sx + Math.sin(t * 3 + i) * 3), Math.round(174 - c * 60), Math.round(2 + c * 8), '#7ac850');
+      }
+      g.globalAlpha = 1;
+    }
+    return;
+  }
   for (const ex of EGOUTS_MONDE1) {
     const sx = Math.round(ex - cam);
     if (sx < -40 || sx > L + 40) continue;
@@ -1075,9 +1571,20 @@ function dessinerJeu(t) {
   }
   // Le héros et les voyous, du fond vers l'avant
   for (const e of ennemis) ombre(Math.round(e.x - cam), Math.round(e.z), e.h);
-  const acteurs = [...ennemis, hr].sort((a, b) => a.z - b.z);
+  if (boss) { g.fillStyle = 'rgba(10, 0, 20, 0.45)'; g.fillRect(Math.round(boss.x - cam) - 18, Math.round(boss.z) - 2, 36, 5); }
+  // L'onde de choc quand le Général retombe
+  for (const e of effets) if (e.type === 'onde') {
+    const r = 20 + (e.t / e.duree) * 110;
+    g.globalAlpha = 1 - e.t / e.duree; g.strokeStyle = '#e8ffd0'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(Math.round(e.x - cam), Math.round(e.z), r, r * 0.22, 0, 0, Math.PI * 2); g.stroke();
+    g.globalAlpha = 1;
+  }
+  const rochers = obstacles.filter((o) => o.type === 'rocher' && Math.abs(o.x - cam - L / 2) < L);
+  const acteurs = [...ennemis, hr, ...rochers, ...(boss ? [boss] : [])].sort((a, b) => a.z - b.z);
   for (const a of acteurs) {
-    if (a === hr) {
+    if (a.type === 'rocher') dessinerRocher(a);
+    else if (a === boss) dessinerBoss(t);
+    else if (a === hr) {
       if (hr.invT > 0 && hr.vie > 0 && Math.floor(hr.invT * 15) % 2) continue;
       dessinerHeros(g, hr.x - cam, hr.z - hr.h, hr.f, { pose: poseHeros(hr), marche: hr.marche, vh: hr.vh, choco: hr.choco }, t);
       if (pouvoir > 0) {
@@ -1125,7 +1632,17 @@ function dessinerHUD(t) {
   g.fillStyle = v > 0.3 ? '#f8d040' : '#ff3030'; g.fillRect(71, 6, Math.round(62 * v), 7);
   g.fillStyle = '#fff8c0'; g.fillRect(71, 6, Math.round(62 * v), 1);
   texte(String(score).padStart(6, '0'), 170, 6, '#fff', 1, '#000');
-  texte('MONDE 1', L - 6, 6, '#ffd040', 1, '#000', 'd');
+  texte(`MONDE ${monde}`, L - 6, 6, '#ffd040', 1, '#000', 'd');
+  // La barre de vie du Général, en bas de l'écran
+  if (boss && boss.etat !== 'entree') {
+    g.fillStyle = 'rgba(10, 2, 12, 0.6)'; g.fillRect(40, H - 22, 240, 18);
+    texte('GÉNÉRAL CONSTIPAX', 46, H - 18, '#b8f060', 1, '#000');
+    g.fillStyle = PAL.contour; g.fillRect(156, H - 18, 118, 9);
+    g.fillStyle = '#3a1010'; g.fillRect(157, H - 17, 116, 7);
+    g.fillStyle = boss.phase === 2 ? '#ff3030' : boss.phase === 1 ? '#ff9020' : '#7ac850';
+    g.fillRect(157, H - 17, Math.round(116 * boss.vie / boss.vieMax), 7);
+    for (const k of [1 / 3, 2 / 3]) { g.fillStyle = PAL.contour; g.fillRect(157 + Math.round(116 * k), H - 17, 1, 7); }
+  }
   // La jauge de pouces, sur le côté : un pouce par voyou K.O. ; pleine, le CHOCO-NOISETTE s'active
   const n = REGLAGES.POUCES_POUR_POUVOIR;
   g.fillStyle = 'rgba(10, 2, 12, 0.5)'; g.fillRect(2, 28, 18, n * 20 + 6);
@@ -1500,7 +2017,7 @@ const SCENES = {
     hx = Math.round(hx);
     g.save();
     if (amp) g.translate(Math.round((Math.random() * 2 - 1) * amp), Math.round((Math.random() * 2 - 1) * amp));
-    dessinerDecor(tm * 32, T);
+    dessinerVille(tm * 32, T);
     g.fillStyle = `rgba(16, 24, 80, ${0.7 * (1 - k)})`; g.fillRect(0, 0, L, H);
     // La transformation : une colonne de lumière et des étincelles qui tournent autour de lui
     if (!intro && ts > 2.2 && ts < 3.6) {
@@ -1589,7 +2106,7 @@ const SCENES = {
   },
   // « Il court pas, il dash »
   dash(ts, T) {
-    dessinerDecor(T * 40, T);
+    dessinerVille(T * 40, T);
     const c = ts % 1.3, p = c / 0.55;
     if (p < 1) {
       const x = -40 + p * 400;
@@ -1603,7 +2120,7 @@ const SCENES = {
   },
   // « Il saute pas, il flash »
   flash(ts, T) {
-    dessinerDecor(T * 10, T);
+    dessinerVille(T * 10, T);
     const c = ts % 1.6;
     if (c < 1) {
       const h = 4 * 110 * c * (1 - c);
@@ -1620,7 +2137,7 @@ const SCENES = {
     const choc = c > 0.45 && c < 0.8;
     g.save();
     if (choc) g.translate(Math.round((Math.random() * 2 - 1) * 4), Math.round((Math.random() * 2 - 1) * 3));
-    dessinerDecor(T * 6, T);
+    dessinerVille(T * 6, T);
     if (c < 0.45) {
       const h = 230 * (1 - c / 0.45) ** 2;
       ombre(160, 196, h);
@@ -1783,26 +2300,63 @@ function dessinerClip(T, dt) {
   if (fondu > 0) { g.fillStyle = `rgba(0,0,0,${fondu})`; g.fillRect(0, 0, L, H); }
 }
 
-// L'écran « MONDE 1 » : le titre du monde en lettres d'or, une bande de la ville, le héros qui traverse.
+// L'écran « MONDE n » : le numéro en lettres d'or, le nom du monde, une bande de son décor, le héros qui traverse.
 function dessinerEcranMonde() {
-  const t = tEtat;
+  const t = tEtat, m = MONDES[monde];
   g.fillStyle = '#000'; g.fillRect(0, 0, L, H);
   const ouv = Math.min(1, t / 0.4);
-  const hb = Math.round(70 * ouv);
-  g.save(); g.beginPath(); g.rect(0, 112 - hb, L, hb * 2); g.clip();
-  g.drawImage(ciel, 0, 0);
-  g.drawImage(loin, Math.round(t * 20) % 320, 0, L, H, 0, 0, L, H);
-  g.drawImage(milieu, Math.round(t * 40) % 320, 0, L, H, 0, 24, L, H);
-  g.fillStyle = 'rgba(10,0,10,0.35)'; g.fillRect(0, 0, L, H);
+  const hb = Math.round(56 * ouv);
+  g.save(); g.beginPath(); g.rect(0, 100 - hb, L, hb * 2); g.clip();
+  g.translate(0, -30);
+  dessinerDecor(t * 40, t);
   g.restore();
-  g.fillStyle = '#ffd040'; g.fillRect(0, 112 - hb - 2, L, 2); g.fillRect(0, 112 + hb, L, 2);
+  g.fillStyle = 'rgba(10,0,10,0.3)'; g.fillRect(0, 100 - hb, L, hb * 2);
+  g.fillStyle = '#ffd040'; g.fillRect(0, 100 - hb - 2, L, 2); g.fillRect(0, 100 + hb, L, 2);
   if (t > 0.4) {
     const p = Math.min(1, (t - 0.4) / 0.25);
-    texte('MONDE 1', L / 2 - (1 - p) * 300, 30, OR, 4, '#3a0a00', 'c');
-    if (t > 0.8) texte('LA VILLE EN CHAOS', L / 2 + Math.max(0, 1 - (t - 0.8) / 0.25) * 300, 152, ['#ffd0d0', '#ff9090', '#ff6060', '#ff3030', '#e01818', '#b00808', '#900000'], 2, '#200000', 'c');
+    texte(`MONDE ${monde}`, L / 2 - (1 - p) * 300, 14, OR, 4, '#3a0a00', 'c');
+    if (t > 0.8) m.titre.forEach((ligne, i) => texte(ligne, L / 2 + Math.max(0, 1 - (t - 0.8 - i * 0.15) / 0.25) * 300, 166 + i * 18, m.couleurs, 2, '#200000', 'c'));
   }
-  dessinerHeros(g, -30 + t * 70, 200, 1, { pose: 'marche', marche: t * 11, choco: false }, t);
-  if (t > 1.6 && Math.floor(t * 3) % 2 === 0) texte('PRÊT ?', L / 2, 196, '#ffffff', 1, '#000', 'c');
+  dessinerHeros(g, -30 + t * 70, 152, 1, { pose: 'marche', marche: t * 11, choco: heros?.choco }, t);
+  if (t > 1.6 && Math.floor(t * 3) % 2 === 0) texte('PRÊT ?', L / 2, 210, '#ffffff', 1, '#000', 'c');
+}
+// Le Général fait son entrée : « Constipax a juré de vaincre ChocoPouce… » (et si le pouce est chargé…)
+function dessinerBossIntro() {
+  const t = tEtat;
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(0, 0, L, H);
+  const hb = Math.round(Math.min(1, t / 0.3) * 30);
+  g.fillStyle = '#000'; g.fillRect(0, 0, L, hb); g.fillRect(0, H - hb, L, hb);
+  const glisse = Math.max(0, 1 - t / 0.4) * 200;
+  g.save(); g.beginPath(); g.rect(0, 30, L, H - 60); g.clip();
+  g.globalAlpha = (Math.sin(t * 8) + 1) * 0.12; g.fillStyle = '#ff2020'; g.fillRect(0, 0, L, H); g.globalAlpha = 1;
+  constipax(80 - glisse, 128, 2, t, true, false);
+  g.restore();
+  const lignes = ['LE GÉNÉRAL CONSTIPAX', 'A JURÉ DE VAINCRE', 'CHOCOPOUCE...'];
+  if (pouvoir > 0) lignes.push('', '...MAIS LE POUCE', 'EST DÉJÀ CHARGÉ !');
+  let reste = Math.floor(Math.max(0, t - 0.5) * 30);
+  lignes.forEach((l, i) => {
+    const vu = l.slice(0, Math.max(0, reste)); reste -= l.length + 4;
+    if (vu) texte(vu, 158, 62 + i * 14, i >= 4 ? '#ffe040' : '#ffffff', 1, '#000');
+  });
+  if (t > 2 && Math.floor(t * 2) % 2 === 0) texte(tactile ? 'TOUCHE POUCE' : 'START', L - 8, H - 24, OR, 1, '#3a0a00', 'd');
+}
+// Victoire : l'énorme pouce choco-noisette, « LE MONDE CHANTE TON NOM : CHOCOPOUCE ! », le score final.
+function dessinerVictoire() {
+  const t = tEtat;
+  rayons(160, 128, t * 0.8, '#3a1604', '#7a3a10', 18);
+  artifices(t);
+  const k = Math.min(1, t / 0.4);
+  grosPouce(160, 136 + (1 - k) * 160, 2, t);
+  texte('LE MONDE CHANTE TON NOM :', L / 2, 10, '#ffffff', 1, '#2a0a04', 'c');
+  if (t > 0.6 && Math.floor(t * 4) % 4 !== 3) g.drawImage(logo, Math.round((L - logo.width) / 2), 24);
+  if (t > 1.6 && boss && boss.combat < 6) texte('K.O. DANS LES CINQ PREMIÈRES SECONDES !', L / 2, 184, '#90e870', 1, '#000', 'c');
+  if (t > 1.2) texte(`SCORE FINAL ${String(score).padStart(6, '0')}`, L / 2, 196, '#ffe040', 1, '#000', 'c');
+  if (t > 4 && Math.floor(t * 2) % 2 === 0) texte(tactile ? "TOUCHE L'ÉCRAN" : 'START : ÉCRAN TITRE', L / 2, 210, '#ffffff', 1, '#000', 'c');
+}
+// À la victoire, la chanson reprend au refrain « CHOCO POUCE ! »
+function musiqueVictoire() {
+  if (generiqueOK) { generique.currentTime = TEMPS_CLIP[12] ?? 0; generique.volume = 0.9; generique.play().catch(() => {}); }
+  else boucleChipDemarre();
 }
 
 function basculerPause() {
@@ -1834,25 +2388,31 @@ function mettreAJour(dt) {
   } else if (etat === 'jeu') {
     tJeu += dt;
     if (fronts.entree) basculerPause();
-    else { majHeros(dt); majEnnemis(dt); majVagues(dt); majPigeons(dt); majParticules(dt); }
+    else { majHeros(dt); majEnnemis(dt); majBoss(dt); majVagues(dt); majPigeons(dt); majParticules(dt); }
   } else if (etat === 'pause') {
     if (fronts.entree) basculerPause();
   } else if (etat === 'pouvoirAnim') {
     // Le jeu est figé le temps de l'énorme pouce
     if (tEtat >= REGLAGES.DUREE_ANIM_POUVOIR) { etat = 'jeu'; tEtat = 0; }
   } else if (etat === 'monde') {
-    // L'écran « MONDE 1 » avant le niveau
+    // L'écran « MONDE n » avant le niveau
     if (tEtat > 3.2 || (tEtat > 0.8 && (fronts.entree || fronts.coup || fronts.saut))) changerEtat('jeu');
+  } else if (etat === 'bossIntro') {
+    // Le Général se présente, puis entre dans l'arène
+    if (tEtat > 6 || (tEtat > 1.2 && (fronts.entree || fronts.coup || fronts.saut))) { changerEtat('jeu'); nouveauBoss(); }
   } else if (etat === 'gameover') {
     tJeu += dt;
     majParticules(dt);
-    if (tEtat > 1.5 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); nouvellePartie(); changerEtat('monde'); son('monde'); }
+    if (tEtat > 1.5 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); commencerMonde(monde, true); changerEtat('monde'); son('monde'); }
   } else if (etat === 'fin') {
-    // Fin du monde : le bonus de vie s'ajoute au score, puis retour à l'écran titre
+    // Fin du monde : le bonus de vie s'ajoute au score, puis le monde suivant
     tJeu += dt;
     majParticules(dt);
     if (tEtat > 2.6 && finT === 0) { finT = 1; score += heros.vie * 10; son('go'); }
-    if (tEtat > 3.2 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); changerEtat('titre'); accueilT = 0; musiqueTitre(true); }
+    if (tEtat > 3.2 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); commencerMonde(monde + 1); changerEtat('monde'); son('monde'); }
+  } else if (etat === 'victoire') {
+    tJeu += dt;
+    if (tEtat > 4 && (fronts.entree || fronts.coup || fronts.saut || (tactile && fronts.nimporte))) { son('start'); changerEtat('titre'); accueilT = 0; musiqueTitre(true); }
   }
   // L'écran d'accueil après le clip : quand la chanson est finie, il reste 20 s, puis le clip recommence
   if (etat === 'titre' && generiqueOK && generique.ended && !CALAGE) {
@@ -1869,6 +2429,7 @@ function dessiner(dt) {
   } else if (etat === 'boot') dessinerBoot();
   else if (etat === 'titre') dessinerClip(tempsClip(), dt);
   else if (etat === 'monde') dessinerEcranMonde();
+  else if (etat === 'victoire') dessinerVictoire();
   else {
     dessinerJeu(tJeu);
     if (etat === 'pouvoirAnim') {
@@ -1886,13 +2447,15 @@ function dessiner(dt) {
       herosGrand(160, 170, 2, 1, { pose: 'assis', choco: heros.choco }, tJeu);
       if (tEtat > 0.6) texte('GAME OVER', 160, 34, ['#ffffff', '#ffd0d0', '#ff9090', '#ff5050', '#ff2020', '#d00000', '#a00000'], 4, '#2a0000', 'c');
       if (tEtat > 1.5 && Math.floor(tEtat * 2) % 2 === 0) texte(tactile ? "TOUCHE POUCE : RECOMMENCER LE MONDE" : 'START : RECOMMENCER LE MONDE', 160, 196, '#fff', 1, '#000', 'c');
+    } else if (etat === 'bossIntro') {
+      dessinerBossIntro();
     } else if (etat === 'fin') {
-      // MONDE 1 TERMINÉ ! : il lève le pouce, le bonus de vie se compte
+      // MONDE n TERMINÉ ! : il lève le pouce, le bonus de vie se compte
       g.fillStyle = `rgba(10,0,16,${Math.min(0.8, tEtat)})`; g.fillRect(0, 0, L, H);
       if (tEtat > 0.3) { g.globalAlpha = Math.min(1, (tEtat - 0.3) * 3); rayons(110, 150, tEtat * 0.5, 'rgba(0,0,0,0)', 'rgba(255,200,80,0.12)', 14); g.globalAlpha = 1; }
       herosGrand(100, 214, 2, 1, { pose: 'coup', choco: true }, tJeu);
       if (Math.floor(tJeu * 6) % 3 === 0) etincelle(100 + 20 * 2, 214 - 51 * 2, 4);
-      texte('MONDE 1', 220, 30, OR, 3, '#3a0a00', 'c');
+      texte(`MONDE ${monde}`, 220, 30, OR, 3, '#3a0a00', 'c');
       texte('TERMINÉ !', 220, 58, OR, 3, '#3a0a00', 'c');
       const bonus = Math.min(heros.vie * 10, Math.max(0, Math.round((tEtat - 1.2) * 600)));
       if (tEtat > 1) {
@@ -1901,8 +2464,8 @@ function dessiner(dt) {
         texte('SCORE', 175, 116, '#ffffff', 1, '#000');
         texte(String(finT ? score : score + bonus).padStart(6, '0'), 300, 116, '#ffe040', 1, '#000', 'd');
       }
-      if (tEtat > 2.8) { texte('PROCHAIN MONDE : LA FORÊT', 220, 146, '#90e870', 1, '#0a2a04', 'c'); texte('BIENTÔT !', 220, 158, '#90e870', 1, '#0a2a04', 'c'); }
-      if (tEtat > 3.2 && Math.floor(tEtat * 2) % 2 === 0) texte('START : ÉCRAN TITRE', 220, 182, '#fff', 1, '#000', 'c');
+      if (tEtat > 2.8) { texte('PROCHAIN MONDE :', 220, 146, '#90e870', 1, '#0a2a04', 'c'); MONDES[monde + 1].titre.forEach((l, i) => texte(l, 220, 158 + i * 10, '#90e870', 1, '#0a2a04', 'c')); }
+      if (tEtat > 3.2 && Math.floor(tEtat * 2) % 2 === 0) texte('START : CONTINUER', 220, 186, '#fff', 1, '#000', 'c');
     }
     if (etat === 'pause') {
       g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 0, L, H);
@@ -1922,7 +2485,7 @@ function boucle() {
 }
 requestAnimationFrame(boucle);
 // « index.html?test » : l'état du jeu lisible depuis la console (pour les essais automatiques)
-if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque, accueilT, generiqueOK, fini: generique.ended, temps: generique.currentTime, duree: generique.duration });
+if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque, monde, boss, obstacles, set pouvoir(v) { pouvoir = v; }, set jauge(v) { jauge = v; }, accueilT, generiqueOK, fini: generique.ended, temps: generique.currentTime, duree: generique.duration });
 </script>
 </body>
 </html>
