@@ -66,6 +66,10 @@ const REGLAGES = {
   HAUTEUR_SAUT: 98,          // pixels (l'écran en fait 224) : « il saute pas, il flash »
   GRAVITE: 950,
   LONGUEUR_MONDE: 3200,      // longueur de la rue du monde 1, en pixels
+  DELAI_RETOURNEMENT: 1.1,   // secondes avant qu'un voyou dépassé se retourne vers le héros (monde 1)
+  DEGATS_ENNEMI: 8,          // vie perdue par coup de voyou reçu
+  POUVOIR_DE_FACE: false,    // true : pendant le choco-noisette, les coups de face comptent aussi
+  DUREE_ANIM_POUVOIR: 1.4,   // secondes de l'animation « CHOCO-NOISETTE ACTIVÉ ! » (le jeu est figé)
 };
 
 // =====================================================================================
@@ -86,7 +90,7 @@ function redimensionner() {
   cv.style.width = w + 'px'; cv.style.height = h + 'px';
   cv.style.left = Math.round((W - w) / 2) + 'px';
   // Téléphone tenu droit : le jeu en haut, les commandes dessous dans le noir
-  cv.style.top = (tactile && Hh > W ? Math.round(Hh * 0.06) : Math.round((Hh - h) / 2)) + 'px';
+  cv.style.top = (tactile && Hh > W ? Math.max(0, Math.round((Hh - 190 - h) / 2)) : Math.round((Hh - h) / 2)) + 'px';
 }
 addEventListener('resize', redimensionner);
 redimensionner();
@@ -122,7 +126,7 @@ const POLICE = {
   ':': '00000 00100 00000 00000 00000 00100 00000', '-': '00000 00000 00000 11111 00000 00000 00000',
   "'": '00100 00100 01000 00000 00000 00000 00000', '/': '00001 00010 00010 00100 01000 01000 10000',
   '©': '01110 10001 10111 10101 10111 10001 01110', '·': '00000 00000 00000 00100 00000 00000 00000', '×': '00000 10001 01010 00100 01010 10001 00000',
-  ' ': '00000 00000 00000 00000 00000 00000 00000',
+  '+': '00000 00100 00100 11111 00100 00100 00000', ' ': '00000 00000 00000 00000 00000 00000 00000', '►': '10000 11000 11100 11110 11100 11000 10000',
 };
 const ACCENTS = { É: ['E', 'aigu'], È: ['E', 'grave'], Ê: ['E', 'circ'], Ë: ['E', 'trema'], À: ['A', 'grave'], Â: ['A', 'circ'],
   Ç: ['C', 'ced'], Î: ['I', 'circ'], Ï: ['I', 'trema'], Ô: ['O', 'circ'], Ù: ['U', 'grave'], Û: ['U', 'circ'], Ü: ['U', 'trema'] };
@@ -212,6 +216,17 @@ const SONS = {
   ting2() { bip('triangle', 1900, 1880, 0.22, 0.3); bip('triangle', 2850, 2830, 0.18, 0.12); },
   start() { [523, 659, 784, 1046].forEach((f, i) => bip('square', f, f, 0.12, 0.16, i * 0.07)); bip('square', 1568, 1568, 0.4, 0.14, 0.28); },
   pause() { bip('square', 880, 880, 0.06, 0.15); bip('square', 660, 660, 0.06, 0.15, 0.08); },
+  impact() { bruit(0.12, 0.6, 1800, 300); bip('square', 220, 80, 0.12, 0.3); },
+  rire() { [520, 440, 520, 440].forEach((f, i) => bip('square', f, f * 0.9, 0.07, 0.12, i * 0.09)); },
+  ko() { bip('square', 600, 60, 0.5, 0.22); bruit(0.3, 0.4, 1200, 200); },
+  aie() { bip('sawtooth', 320, 90, 0.25, 0.28); bruit(0.1, 0.3, 900, 300); },
+  retourne() { bip('square', 300, 620, 0.06, 0.07); },
+  go() { bip('square', 988, 988, 0.08, 0.15); bip('square', 1318, 1318, 0.12, 0.15, 0.1); },
+  pouvoir() {
+    [523, 659, 784, 1046, 1318].forEach((f, i) => bip('square', f, f, 0.14, 0.18, i * 0.08));
+    bip('square', 1568, 1568, 0.7, 0.16, 0.42); bip('triangle', 784, 784, 0.9, 0.35, 0.42); bruit(0.5, 0.3, 3000, 8000, 0.42);
+  },
+  gameover() { [392, 370, 349, 330].forEach((f, i) => bip('square', f, f * 0.98, 0.32, 0.16, i * 0.34)); bip('triangle', 165, 82, 1.2, 0.35, 1.36); },
 };
 const son = (n) => { if (actx && actx.state === 'running') SONS[n](); };
 
@@ -349,7 +364,7 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   const pose = e.pose;
   const p = pose === 'marche' ? Math.sin(e.marche) : 0;
   const pench = pose === 'dash' ? 4 : pose === 'coup' ? 1 : 0; // le haut du corps penche en avant
-  const sq = pose === 'atterrit' ? 4 : 0;                       // tassé à l'atterrissage
+  const sq = pose === 'atterrit' ? 4 : pose === 'assis' ? 17 : 0; // tassé à l'atterrissage, assis par terre (game over)
   const bob = pose === 'debout' ? (Math.sin(t * 3) > 0.55 ? 1 : 0) : pose === 'marche' ? (Math.abs(p) > 0.7 ? -1 : 0) : 0;
   const hy = bob + sq; // décalage vertical du haut du corps
 
@@ -377,7 +392,10 @@ function dessinerHeros(x, ox, oy, f, e, t) {
   O(-12 + pench - Math.round(p * 2), -30 + hy, 5, 4, PAL.peauOmbre);
 
   // Jambes
-  if (pose === 'saut') {
+  if (pose === 'assis') {
+    O(-5, -9, 17, 5, PAL.jambeOmbre); O(13, -13, 4, 8, PAL.chaussure);
+    O(-3, -6, 17, 5, PAL.jambe); O(15, -10, 4, 8, PAL.chaussure);
+  } else if (pose === 'saut') {
     O(-7, -22, 6, 11, PAL.jambeOmbre); O(-10, -12, 8, 4, PAL.chaussure);
     O(1, -24, 6, 9, PAL.jambe); O(3, -16, 8, 4, PAL.chaussure);
   } else if (pose === 'dash') {
@@ -441,6 +459,13 @@ function dessinerHeros(x, ox, oy, f, e, t) {
     O(3 + pench, -60 + hy, 5, 16, PAL.costume);
     O(2 + pench, -67 + hy, 7, 6, PAL.peau);
     pouce = [4 + pench, -73 + hy];
+  } else if (pose === 'assis') {
+    // Le pouce baissé : game over
+    O(4, -27, 5, 13, PAL.costume);
+    O(5, -15, 6, 5, PAL.peau);
+    O(7, -10, 3, 6, PAL.peau);
+    if (e.choco) { R(7, -6, 3, 2, PAL.choco); R(8, -4, 1, 2, PAL.choco); }
+    R(2, -51 + hy, 1, 1, PAL.bouche); R(6, -51 + hy, 1, 1, PAL.bouche);
   } else {
     O(4 + pench + Math.round(p * 2), -44 + hy, 5, 15, PAL.costume);
     O(4 + pench + Math.round(p * 2), -30 + hy, 5, 5, PAL.peau);
@@ -453,7 +478,7 @@ function dessinerHeros(x, ox, oy, f, e, t) {
     R(pouce[0], pouce[1], 3, 1, PAL.ongle);
   }
   // Le chocolat au bout du pouce, dès le premier coup porté
-  if (e.choco) {
+  if (e.choco && pose !== 'assis') {
     const [px, py] = pouce ?? [8 + pench + Math.round(p * 2), -32 + hy];
     R(px - 1, py - 2, pouce ? 5 : 4, 3, PAL.contour);
     R(px, py - 1, pouce ? 3 : 2, 2, PAL.choco);
@@ -503,6 +528,67 @@ function dessinerHerosVol(x, ox, oy, t) {
   O(34, -3, 7, 8, PAL.peau); R(34, 1, 7, 1, PAL.peauOmbre); R(34, 3, 7, 1, PAL.peauOmbre);
   O(36, -10, 3, 7, PAL.peau); R(36, -10, 3, 1, PAL.ongle);
   R(35, -12, 5, 3, PAL.contour); R(36, -11, 3, 2, PAL.choco); R(36, -11, 1, 1, PAL.chocoClair); R(38, -9, 1, 2, PAL.choco);
+}
+
+// Un voyou de rue (monde 1) : sweat à capuche, casquette visière devant (on voit de quel côté il regarde),
+// jean et baskets. (ox, oy) : ses pieds. Poses : marche, prepare (il arme), frappe, touche, rigole.
+const PAL_V = { contour: '#140a14', peau: '#d89070', peauOmbre: '#a86048', barbe: '#8a5a40', sweat: '#5a4a72', sweatOmbre: '#3a2e52',
+  jean: '#36508a', jeanOmbre: '#243a68', basket: '#e8e8f0', bande: '#d02828', casquette: '#d02828', casquetteClair: '#f05050', casquetteOmbre: '#901818' };
+function dessinerVoyou(x, ox, oy, f, e, t) {
+  ox = Math.round(ox); oy = Math.round(oy);
+  const R = (px, py, w, h, c) => { x.fillStyle = c; x.fillRect(f > 0 ? ox + px : ox - px - w, oy + py, w, h); };
+  const O = (px, py, w, h, c) => { R(px - 1, py - 1, w + 2, h + 2, PAL_V.contour); R(px, py, w, h, c); };
+  const pose = e.pose;
+  const p = pose === 'marche' ? Math.sin(e.marche) : 0;
+  const rc = pose === 'touche' ? -3 : pose === 'rigole' ? -2 : pose === 'frappe' ? 2 : 0; // le haut du corps penche
+  const hy = pose === 'touche' ? 1 : pose === 'rigole' ? Math.round(Math.abs(Math.sin(t * 20))) : 0;
+  O(-6 - Math.round(3 * p), -22, 6, 18, PAL_V.jeanOmbre); O(-7 - Math.round(3 * p), -4, 8, 4, PAL_V.basket); R(-7 - Math.round(3 * p), -3, 8, 1, PAL_V.bande);
+  O(1 + Math.round(3 * p), -22, 6, 18, PAL_V.jean); O(1 + Math.round(3 * p), -4, 8, 4, PAL_V.basket); R(1 + Math.round(3 * p), -3, 8, 1, PAL_V.bande);
+  O(-11 + rc, -42 + hy, 5, 16, PAL_V.sweatOmbre); O(-11 + rc, -27 + hy, 5, 4, PAL_V.peauOmbre);
+  O(-12 + rc, -50 + hy, 7, 9, PAL_V.sweatOmbre); // la capuche dans le dos
+  O(-9 + rc, -44 + hy, 18, 24, PAL_V.sweat);
+  R(-9 + rc, -44 + hy, 3, 24, PAL_V.sweatOmbre);
+  R(-2 + rc, -30 + hy, 10, 5, PAL_V.sweatOmbre);
+  R(4 + rc, -43 + hy, 1, 5, '#e8e8f0'); R(6 + rc, -43 + hy, 1, 4, '#e8e8f0');
+  O(-6 + rc, -58 + hy, 12, 12, PAL_V.peau);
+  R(-6 + rc, -58 + hy, 2, 12, PAL_V.peauOmbre);
+  R(-1 + rc, -50 + hy, 7, 4, PAL_V.barbe);
+  R(3 + rc, -54 + hy, 2, 2, '#201010');
+  R(2 + rc, -56 + hy, 3, 1, '#3a1a10'); R(5 + rc, -57 + hy, 1, 1, '#3a1a10');
+  R(6 + rc, -53 + hy, 1, 2, PAL_V.peauOmbre);
+  if (pose === 'rigole') { R(2 + rc, -50 + hy, 4, 3, '#401010'); R(2 + rc, -50 + hy, 4, 1, '#ffffff'); }
+  else R(3 + rc, -49 + hy, 3, 1, '#401010');
+  O(-6 + rc, -62 + hy, 12, 5, PAL_V.casquette); R(-6 + rc, -62 + hy, 12, 1, PAL_V.casquetteClair);
+  O(6 + rc, -58 + hy, 6, 2, PAL_V.casquetteOmbre);
+  if (pose === 'prepare') { O(-4 + rc, -46 + hy, 5, 10, PAL_V.sweat); O(-8 + rc, -50 + hy, 6, 6, PAL_V.peau); }
+  else if (pose === 'frappe') { O(4 + rc, -42 + hy, 16, 5, PAL_V.sweat); O(20 + rc, -43 + hy, 6, 6, PAL_V.peau); }
+  else { O(3 + rc + Math.round(2 * p), -42 + hy, 5, 16, PAL_V.sweat); O(3 + rc + Math.round(2 * p), -27 + hy, 5, 4, PAL_V.peau); }
+}
+const tmpEnnemi = toile(90, 90);
+function dessinerEnnemi(e, t) {
+  const sx = e.x - cam, sy = e.z - e.h;
+  const pose = e.etat === 'ko' ? 'touche' : e.etat;
+  if (e.etat === 'ko') {
+    if (e.t > 0.9 && Math.floor(e.t * 16) % 2) return; // il clignote avant de disparaître
+    // Il bascule en arrière et s'écrase par terre (dessiné à part puis tourné)
+    const c = tmpEnnemi.getContext('2d');
+    c.clearRect(0, 0, 90, 90);
+    dessinerVoyou(c, 45, 80, e.f, { pose }, t);
+    const angle = Math.min(1, e.t / 0.35) * (Math.PI / 2) * (e.koDir || 1); // frappé dans le dos : il tombe en avant
+    g.save(); g.translate(Math.round(sx), Math.round(sy)); g.rotate(angle); g.drawImage(tmpEnnemi, -45, -80); g.restore();
+    return;
+  }
+  dessinerVoyou(g, sx, sy, e.f, { pose, marche: e.marche }, t);
+}
+
+// Petite icône de pouce de la jauge (vide, pleine de chocolat, ou dorée pendant le pouvoir)
+function pouceIcone(x, y, plein, dore) {
+  const R = (px, py, w, h, c) => { g.fillStyle = c; g.fillRect(x + px, y + py, w, h); };
+  R(1, -1, 6, 9, PAL.contour); R(-1, 6, 13, 10, PAL.contour);
+  const peau = dore ? '#ffd040' : plein ? PAL.peau : '#3a2a44';
+  R(2, 0, 4, 8, peau); R(0, 7, 11, 8, peau);
+  R(0, 7, 2, 8, dore ? '#d09010' : plein ? PAL.peauOmbre : '#2a1e34');
+  if (plein || dore) { R(2, 0, 4, 2, dore ? '#fff4b0' : PAL.choco); R(5, 10, 6, 1, dore ? '#d09010' : PAL.peauOmbre); R(5, 12, 6, 1, dore ? '#d09010' : PAL.peauOmbre); }
 }
 
 // =====================================================================================
@@ -629,9 +715,149 @@ function dessinerDecor(cam, t) {
 // =====================================================================================
 const ZMIN = 150, ZMAX = 216; // profondeur où l'on marche (le bas des pieds à l'écran)
 let heros, cam, particules, effets, secousse, score, debutJeu;
+let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT;
+// Les vagues de voyous du monde 1 : quand le héros arrive à x, la caméra s'arrête et n voyous arrivent.
+const VAGUES_MONDE1 = [{ x: 360, n: 2 }, { x: 1000, n: 3 }, { x: 1700, n: 4 }, { x: 2450, n: 5 }];
 function nouvellePartie() {
-  heros = { x: 70, z: 190, h: 0, vh: 0, f: 1, marche: 0, dashT: 0, dashDir: 0, dashAir: false, coupT: 0, atterT: 0, vie: REGLAGES.VIE_HEROS, choco: false, fantomes: [] };
+  heros = { x: 70, z: 190, h: 0, vh: 0, f: 1, marche: 0, dashT: 0, dashDir: 0, dashAir: false, coupT: 0, coupFait: true, atterT: 0,
+    blesseT: 0, invT: 0, vie: REGLAGES.VIE_HEROS, choco: false, fantomes: [] };
   cam = 0; particules = []; effets = []; secousse = 0; score = 0; debutJeu = tJeu;
+  ennemis = []; jauge = 0; pouvoir = 0; vagues = VAGUES_MONDE1.map((v) => ({ ...v })); vague = null; bloque = false; goT = 0; finT = 0;
+}
+
+// ——— Les voyous (monde 1) ———
+const TYPES_ENNEMIS = {
+  voyou: { vitesse: 34, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT, portee: 30, preparation: 0.5, recharge: 1.5 },
+};
+function nouvelEnnemi(x, z, f) {
+  return { type: 'voyou', x, z, h: 0, vh: 0, f, vie: REGLAGES.COUPS_POUR_TUER, etat: 'marche', t: 0, marche: 0, tRetour: 0, recharge: 0.8 + Math.random(), alerte: 0, bulle: null };
+}
+function majEnnemis(dt) {
+  const hr = heros;
+  for (const e of ennemis) {
+    const ty = TYPES_ENNEMIS[e.type];
+    e.alerte = Math.max(0, e.alerte - dt);
+    if (e.bulle) { e.bulle.t -= dt; if (e.bulle.t <= 0) e.bulle = null; }
+    if (e.etat === 'ko') {
+      e.t += dt; e.x += e.vx * dt; e.h += e.vh * dt; e.vh -= 600 * dt;
+      if (e.h < 0) { e.h = 0; e.vh = 0; e.vx *= 0.8; }
+      continue;
+    }
+    if (e.etat === 'touche' || e.etat === 'rigole') { e.t -= dt; if (e.t <= 0) e.etat = 'marche'; else continue; }
+    const dx = hr.x - e.x, dz = hr.z - e.z;
+    const vers = Math.sign(dx) || e.f;
+    // Dépassé par le héros : il met un moment à se retourner (c'est le moment de frapper dans le dos)
+    if (e.f !== vers && e.etat === 'marche') {
+      e.tRetour += dt;
+      if (e.tRetour >= ty.delaiRetour()) { e.f = vers; e.tRetour = 0; e.alerte = 0.5; son('retourne'); }
+    } else e.tRetour = 0;
+    e.recharge -= dt;
+    if (e.etat === 'prepare') {
+      e.t -= dt;
+      if (e.t <= 0) {
+        e.etat = 'frappe'; e.t = 0.22;
+        if (Math.abs(hr.x - e.x) < ty.portee + 6 && Math.sign(hr.x - e.x) === e.f && Math.abs(dz) < 10 && hr.h < 30) blesser(REGLAGES.DEGATS_ENNEMI, e.f);
+      }
+      continue;
+    }
+    if (e.etat === 'frappe') { e.t -= dt; if (e.t <= 0) { e.etat = 'marche'; e.recharge = ty.recharge; } continue; }
+    // Il avance vers le héros quand il le regarde, et frappe quand il est à portée
+    let mx = 0, mz = 0;
+    if (e.f === vers) {
+      if (Math.abs(dx) > ty.portee - 4) mx = vers;
+      if (Math.abs(dz) > 3) mz = Math.sign(dz);
+      if (Math.abs(dx) <= ty.portee && Math.abs(dz) < 8 && e.recharge <= 0 && hr.vie > 0) { e.etat = 'prepare'; e.t = ty.preparation; continue; }
+    }
+    // Les voyous ne s'empilent pas les uns sur les autres
+    for (const o of ennemis) if (o !== e && o.etat !== 'ko' && Math.abs(o.x - e.x) < 14 && Math.abs(o.z - e.z) < 6) mz += e.z < o.z ? -0.6 : 0.6;
+    e.x += mx * ty.vitesse * dt;
+    e.z = Math.max(ZMIN, Math.min(ZMAX, e.z + Math.sign(mz) * ty.vitesse * 0.6 * dt));
+    if (mx || mz) e.marche += dt * 9; else e.marche = 0;
+  }
+  ennemis = ennemis.filter((e) => !(e.etat === 'ko' && e.t > 1.3));
+}
+// Le coup de pouce : il ne fait mal que dans le dos (règle de ChocoPouce) ; de face, « TING » et le voyou rigole.
+function frapper() {
+  const hr = heros, max = pouvoir > 0 ? 2 : 1;
+  const cibles = ennemis
+    .filter((e) => e.etat !== 'ko' && Math.abs(e.z - hr.z) < 11 && Math.abs(e.h - hr.h) < 40 && (e.x - hr.x) * hr.f > 0 && (e.x - hr.x) * hr.f < 36)
+    .sort((a, b) => Math.abs(a.x - hr.x) - Math.abs(b.x - hr.x)).slice(0, max);
+  for (const e of cibles) {
+    hr.choco = true; // du chocolat au bout du pouce dès le premier coup porté
+    const dansLeDos = Math.sign(hr.x - e.x) === -e.f;
+    if (dansLeDos || (pouvoir > 0 && REGLAGES.POUVOIR_DE_FACE)) toucher(e);
+    else {
+      son('ting2');
+      texteFlottant('TING!', e.x - hr.f * 6, e.z, e.h + 46, '#e0f0ff', 0.5);
+      if (e.etat === 'marche') { e.etat = 'rigole'; e.t = 0.7; e.bulle = { str: 'HA HA!', t: 0.8 }; setTimeout(() => son('rire'), 120); }
+      hr.x -= hr.f * 10;
+    }
+  }
+}
+function toucher(e) {
+  const hr = heros;
+  e.vie -= pouvoir > 0 ? e.vie : 1;
+  e.x += hr.f * 9;
+  e.tRetour = 0;
+  son('impact'); secousse = Math.max(secousse, 0.08);
+  score += 100 * (pouvoir > 0 ? 2 : 1);
+  // Étincelles et éclaboussures de chocolat
+  const hx = e.x - hr.f * 8, hy = e.h + 40;
+  for (let i = 0; i < 8; i++) particules.push({ x: hx, z: e.z, h: hy, vx: (Math.random() * 2 - 1) * 90, vh: Math.random() * 90, vie: 0.3, max: 0.3, c: i % 2 ? '#fff6a0' : '#ffffff', taille: 1 });
+  for (let i = 0; i < 5; i++) particules.push({ x: hx, z: e.z, h: hy, vx: hr.f * (30 + Math.random() * 60), vh: 20 + Math.random() * 60, vie: 0.5, max: 0.5, c: PAL.choco, taille: 2 });
+  effets.push({ type: 'eclat', x: hx, z: e.z, h: hy, t: 0, duree: 0.15 });
+  if (e.vie <= 0) {
+    e.etat = 'ko'; e.t = 0; e.vx = hr.f * 110; e.vh = 150; e.koDir = hr.f;
+    son('ko');
+    score += 500 * (pouvoir > 0 ? 2 : 1);
+    texteFlottant(pouvoir > 0 ? '+1000' : '+500', e.x, e.z, 70, '#ffe040', 0.8);
+    ennemiTue();
+  } else { e.etat = 'touche'; e.t = 0.35; }
+}
+// Chaque voyou mis K.O. remplit la jauge de pouces ; pleine, le pouvoir CHOCO-NOISETTE s'active.
+function ennemiTue() {
+  if (pouvoir > 0) {
+    pouvoir--;
+    if (pouvoir === 0) jauge = 0;
+    return;
+  }
+  jauge++;
+  if (jauge >= REGLAGES.POUCES_POUR_POUVOIR) {
+    pouvoir = REGLAGES.POUVOIR_DUREE_ENNEMIS;
+    son('pouvoir');
+    changerEtat('pouvoirAnim');
+  }
+}
+function blesser(degats, dir) {
+  const hr = heros;
+  if (hr.invT > 0 || hr.vie <= 0) return;
+  hr.vie = Math.max(0, hr.vie - degats);
+  hr.invT = 1.2; hr.blesseT = 0.3; hr.coupT = 0; hr.dashT = 0;
+  hr.x += dir * 14;
+  son('aie'); secousse = 0.15;
+  if (hr.vie <= 0) { changerEtat('gameover'); son('gameover'); }
+}
+function texteFlottant(str, x, z, h, couleur, duree) { effets.push({ type: 'texte', str, x, z, h, couleur, t: 0, duree }); }
+// Les vagues : la caméra s'arrête, les voyous arrivent par les deux côtés ; tous K.O., « GO ► ».
+function majVagues(dt) {
+  if (goT > 0) goT -= dt;
+  if (!vague) {
+    const v = vagues.find((w) => !w.faite && heros.x >= w.x);
+    if (v) { vague = v; v.faite = true; v.reste = v.n; v.prochain = 0.3; bloque = true; }
+  } else {
+    if (vague.reste > 0) {
+      vague.prochain -= dt;
+      if (vague.prochain <= 0) {
+        const cote = vague.reste % 2 ? 1 : -1;
+        ennemis.push(nouvelEnnemi(cote > 0 ? cam + L + 24 : cam - 24, ZMIN + 8 + Math.random() * (ZMAX - ZMIN - 14), -cote));
+        vague.reste--; vague.prochain = 0.9;
+      }
+    } else if (!ennemis.some((e) => e.etat !== 'ko')) {
+      vague = null; bloque = false;
+      if (vagues.some((w) => !w.faite)) { goT = 2.5; son('go'); }
+    }
+  }
+  if (!vague && vagues.every((w) => w.faite) && heros.x > REGLAGES.LONGUEUR_MONDE - 60 && etat === 'jeu') changerEtat('fin');
 }
 function majHeros(dt) {
   const hr = heros, auSol = hr.h <= 0 && hr.vh <= 0;
@@ -651,11 +877,20 @@ function majHeros(dt) {
     effets.push({ type: 'flash', x: hr.x, z: hr.z, t: 0, duree: 0.22 });
   }
   // Coup de pouce
-  if (fronts.coup && hr.coupT <= 0 && hr.dashT <= 0) { hr.coupT = 0.26; son('coup'); }
+  if (fronts.coup && hr.coupT <= 0 && hr.dashT <= 0 && hr.blesseT <= 0) { hr.coupT = 0.26; hr.coupFait = false; son('coup'); }
   if (hr.coupT > 0) hr.coupT -= dt;
+  if (!hr.coupFait && hr.coupT < 0.2) { hr.coupFait = true; frapper(); }
   if (hr.atterT > 0) hr.atterT -= dt;
+  if (hr.invT > 0) hr.invT -= dt;
+  // Pendant le pouvoir, le pouce laisse des miettes de noisette
+  if (pouvoir > 0 && Math.random() < 0.5) {
+    const p = poseHeros(hr), py = p === 'coup' ? 51 : p === 'saut' ? 73 : 32;
+    particules.push({ x: hr.x + hr.f * (p === 'coup' ? 20 : 9), z: hr.z, h: hr.h + py, vx: (Math.random() * 2 - 1) * 20, vh: 10 + Math.random() * 20, vie: 0.6, max: 0.6, c: Math.random() < 0.5 ? '#d8a060' : '#f0d0a0', taille: 1 });
+  }
 
-  if (hr.dashT > 0) {
+  if (hr.blesseT > 0) {
+    hr.blesseT -= dt;
+  } else if (hr.dashT > 0) {
     hr.dashT -= dt;
     hr.x += hr.dashDir * REGLAGES.VITESSE_DASH * dt;
     if (hr.h > 0) hr.vh = Math.max(hr.vh, 0) * 0.9; // en l'air, le dash file droit
@@ -681,11 +916,11 @@ function majHeros(dt) {
       for (let i = 0; i < 12; i++) { const s = i % 2 ? 1 : -1; particules.push({ x: hr.x + s * (4 + Math.random() * 10), z: hr.z + (Math.random() * 4 - 2), h: 1, vx: s * (25 + Math.random() * 55), vh: 10 + Math.random() * 28, vie: 0.45, max: 0.45, c: Math.random() < 0.5 ? '#c8b8a8' : '#8a7a6a', taille: 2, poussiere: true }); }
     }
   }
-  hr.x = Math.max(cam + 12, Math.min(REGLAGES.LONGUEUR_MONDE - 12, hr.x));
+  hr.x = Math.max(cam + 12, Math.min(REGLAGES.LONGUEUR_MONDE - 12, bloque ? cam + L - 14 : Infinity, hr.x));
   hr.z = Math.max(ZMIN, Math.min(ZMAX, hr.z));
-  // La caméra suit vers l'avant seulement, comme dans les beat'em up
+  // La caméra suit vers l'avant seulement, comme dans les beat'em up ; elle s'arrête pendant une vague
   const cible = Math.min(hr.x - 130, REGLAGES.LONGUEUR_MONDE - L);
-  if (cible > cam) cam += (cible - cam) * Math.min(1, dt * 6);
+  if (cible > cam && !bloque) cam += (cible - cam) * Math.min(1, dt * 6);
   for (const f of hr.fantomes) f.vie -= dt;
   hr.fantomes = hr.fantomes.filter((f) => f.vie > 0).slice(-6);
 }
@@ -700,6 +935,8 @@ function majParticules(dt) {
   if (secousse > 0) secousse -= dt;
 }
 function poseHeros(hr) {
+  if (hr.vie <= 0) return 'assis';
+  if (hr.blesseT > 0) return 'atterrit';
   if (hr.dashT > 0) return 'dash';
   if (hr.h > 0) return 'saut';
   if (hr.coupT > 0) return 'coup';
@@ -728,7 +965,21 @@ function dessinerJeu(t) {
     for (const dx of [-14, -9, 9, 14]) g.fillRect(x0 + dx, Math.round(e.z - 20 - k * 70), 1, Math.round(28 + 30 * (1 - k)));
     g.fillStyle = '#ffffff'; g.fillRect(x0 - 12, Math.round(e.z), 24, 1);
   }
-  dessinerHeros(g, hr.x - cam, hr.z - hr.h, hr.f, { pose: poseHeros(hr), marche: hr.marche, vh: hr.vh, choco: hr.choco }, t);
+  // Le héros et les voyous, du fond vers l'avant
+  for (const e of ennemis) ombre(Math.round(e.x - cam), Math.round(e.z), e.h);
+  const acteurs = [...ennemis, hr].sort((a, b) => a.z - b.z);
+  for (const a of acteurs) {
+    if (a === hr) {
+      if (hr.invT > 0 && hr.vie > 0 && Math.floor(hr.invT * 15) % 2) continue;
+      dessinerHeros(g, hr.x - cam, hr.z - hr.h, hr.f, { pose: poseHeros(hr), marche: hr.marche, vh: hr.vh, choco: hr.choco }, t);
+      if (pouvoir > 0) {
+        const p = poseHeros(hr), px = hr.x - cam + hr.f * (p === 'coup' ? 20 : 9), py = hr.z - hr.h - (p === 'coup' ? 51 : p === 'saut' ? 73 : 32);
+        const k = Math.floor(t * 12) % 4;
+        g.globalAlpha = 0.35; disque(g, Math.round(px), Math.round(py), 5 + (k % 2), '#ffe080'); g.globalAlpha = 1;
+        etincelle(px + 4, py - 4, [1, 2, 3, 2][k], '#fff8c0');
+      }
+    } else dessinerEnnemi(a, t);
+  }
   for (const p of particules) {
     g.globalAlpha = Math.min(1, p.vie / p.max * 1.5);
     g.fillStyle = p.c;
@@ -736,6 +987,18 @@ function dessinerJeu(t) {
     g.fillRect(Math.round(p.x - cam - s / 2), Math.round(p.z - p.h - s / 2), s, s);
   }
   g.globalAlpha = 1;
+  // Éclats des coups, textes qui s'envolent, bulles des voyous
+  for (const e of effets) {
+    if (e.type === 'eclat') { const r = Math.round(4 + e.t * 50); etincelle(e.x - cam, e.z - e.h, r, '#ffffff'); etincelle(e.x - cam, e.z - e.h, Math.round(r / 2), '#fff060'); }
+    if (e.type === 'texte') texte(e.str, e.x - cam, e.z - e.h - e.t * 24, e.couleur, 1, '#000', 'c');
+  }
+  for (const e of ennemis) {
+    const sx = e.x - cam, sy = e.z - e.h - 74;
+    if (e.bulle) texte(e.bulle.str, sx, sy, '#ffffff', 1, '#5a0808', 'c');
+    else if (e.alerte > 0) texte('!', sx, sy, '#ff4040', 2, '#000', 'c');
+    else if (e.etat === 'marche' && e.tRetour > TYPES_ENNEMIS[e.type].delaiRetour() * 0.45) texte('?', sx, sy, '#ffe040', 1, '#000', 'c');
+  }
+  if (goT > 0 && Math.floor(goT * 3) % 2) texte('GO ►', L - 10, 60, OR, 2, '#3a0a00', 'd');
   // « BOUM ! » à l'atterrissage
   for (const e of effets) if (e.type === 'boum') {
     const k = e.t / e.duree;
@@ -755,6 +1018,14 @@ function dessinerHUD(t) {
   g.fillStyle = '#fff8c0'; g.fillRect(71, 6, Math.round(62 * v), 1);
   texte(String(score).padStart(6, '0'), 170, 6, '#fff', 1, '#000');
   texte('MONDE 1', L - 6, 6, '#ffd040', 1, '#000', 'd');
+  // La jauge de pouces, sur le côté : un pouce par voyou K.O. ; pleine, le CHOCO-NOISETTE s'active
+  const n = REGLAGES.POUCES_POUR_POUVOIR;
+  g.fillStyle = 'rgba(10, 2, 12, 0.5)'; g.fillRect(2, 28, 18, n * 20 + 6);
+  for (let i = 0; i < n; i++) {
+    const dore = pouvoir > 0 && Math.floor(t * 8 + i) % 2 === 0;
+    pouceIcone(5, 32 + (n - 1 - i) * 20, pouvoir > 0 || i < jauge, dore);
+  }
+  if (pouvoir > 0) texte(`×${pouvoir}`, 4, 36 + n * 20, '#ffe040', 1, '#000');
   // Aide pour les premières secondes
   const age = tJeu - debutJeu;
   if (age < 7 && Math.floor(age * 3) % 4 !== 3) {
@@ -1378,9 +1649,16 @@ function mettreAJour(dt) {
   } else if (etat === 'jeu') {
     tJeu += dt;
     if (fronts.entree) basculerPause();
-    else { majHeros(dt); majParticules(dt); }
+    else { majHeros(dt); majEnnemis(dt); majVagues(dt); majParticules(dt); }
   } else if (etat === 'pause') {
     if (fronts.entree) basculerPause();
+  } else if (etat === 'pouvoirAnim') {
+    // Le jeu est figé le temps de l'énorme pouce
+    if (tEtat >= REGLAGES.DUREE_ANIM_POUVOIR) { etat = 'jeu'; tEtat = 0; }
+  } else if (etat === 'gameover' || etat === 'fin') {
+    tJeu += dt;
+    majParticules(dt);
+    if (tEtat > 1.5 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); nouvellePartie(); changerEtat('jeu'); }
   }
   for (const k in fronts) fronts[k] = false;
 }
@@ -1393,6 +1671,28 @@ function dessiner(dt) {
   else if (etat === 'titre') dessinerClip(tempsClip(), dt);
   else {
     dessinerJeu(tJeu);
+    if (etat === 'pouvoirAnim') {
+      // CHOCO-NOISETTE ACTIVÉ ! : l'énorme pouce surgit au milieu de l'écran
+      const k = Math.min(1, tEtat / 0.25);
+      g.globalAlpha = 0.85; rayons(160, 120, tEtat * 2, '#3a1604', '#7a3a10', 18); g.globalAlpha = 1;
+      grosPouce(160, 128 + (1 - k) * 160, 4, tEtat);
+      if (Math.floor(tEtat * 8) % 2 === 0) {
+        texte('CHOCO-NOISETTE', 160, 16, CHOCO, 3, '#1a0802', 'c');
+        texte('ACTIVÉ !', 160, 44, OR, 3, '#3a0a00', 'c');
+      }
+      if (tEtat < 0.12) { g.fillStyle = `rgba(255,255,255,${1 - tEtat / 0.12})`; g.fillRect(0, 0, L, H); }
+    } else if (etat === 'gameover') {
+      g.fillStyle = `rgba(0,0,0,${Math.min(0.75, tEtat)})`; g.fillRect(0, 0, L, H);
+      herosGrand(160, 170, 2, 1, { pose: 'assis', choco: heros.choco }, tJeu);
+      if (tEtat > 0.6) texte('GAME OVER', 160, 34, ['#ffffff', '#ffd0d0', '#ff9090', '#ff5050', '#ff2020', '#d00000', '#a00000'], 4, '#2a0000', 'c');
+      if (tEtat > 1.5 && Math.floor(tEtat * 2) % 2 === 0) texte(tactile ? "TOUCHE POUCE : RECOMMENCER LE MONDE" : 'START : RECOMMENCER LE MONDE', 160, 196, '#fff', 1, '#000', 'c');
+    } else if (etat === 'fin') {
+      g.fillStyle = `rgba(0,0,0,${Math.min(0.6, tEtat)})`; g.fillRect(0, 0, L, H);
+      texte('BRAVO !', 160, 60, OR, 4, '#3a0a00', 'c');
+      texte('LA RUE EST NETTOYÉE', 160, 110, '#fff', 1, '#000', 'c');
+      texte(`SCORE ${String(score).padStart(6, '0')}`, 160, 126, '#ffe040', 1, '#000', 'c');
+      if (tEtat > 1.5 && Math.floor(tEtat * 2) % 2 === 0) texte('START : REJOUER', 160, 170, '#fff', 1, '#000', 'c');
+    }
     if (etat === 'pause') {
       g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 0, L, H);
       texte('PAUSE', L / 2, 96, ['#ffffff', '#fff8d0', '#ffe890', '#ffd850', '#ffc830', '#ffb820', '#ffa810'], 3, '#3a0a00', 'c');
@@ -1410,6 +1710,8 @@ function boucle() {
   requestAnimationFrame(boucle);
 }
 requestAnimationFrame(boucle);
+// « index.html?test » : l'état du jeu lisible depuis la console (pour les essais automatiques)
+if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque });
 </script>
 </body>
 </html>
