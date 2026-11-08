@@ -1156,10 +1156,10 @@ const CLIP = [
 // Le moment (en secondes depuis le début du générique) où commence chaque ligne de CLIP, calé à l'oreille
 // sur la chanson (novembre 2026). Pour le refaire (autre version de la chanson, lignes ajoutées) : ouvrir
 // « index.html?caler » (voir CALAGE plus bas) et coller ici la liste obtenue.
-let TEMPS_CLIP = [24.74, 31.17, 37.03, 49.32, 54.9, 59.63, 62.02, 73.4, 74.94, 77.04, 80.64, 81.16, 82.33, 92.36, 94.95,
-  95.86, 98.51, 100.97, 103.69, 105.51, 109.45, 123.16, 129.32, 135.43, 136.65, 142.09, 144.36, 150.84, 151.49, 157.04,
-  163.13, 163.64, 168.55, 171.63, 174.43, 177.6, 180.49, 185.79, 192.08, 198.77, 200.98, 206.27, 212.39, 233.5, 236.61,
-  237.36, 238.04];
+let TEMPS_CLIP = [24.71, 32.67, 37.04, 39.72, 49.36, 54.99, 61.51, 64.76, 73.34, 76.43, 77.8, 80.01, 84.87, 86.22, 90.93,
+  92.21, 97.93, 100.92, 102.9, 104.55, 109.48, 123.2, 129.32, 135.15, 138.55, 142.06, 144.72, 155.45, 155.9, 156.99,
+  161.64, 163.24, 168.69, 171.76, 173.3, 177.43, 180.45, 204.74, 206.24, 213.24, 237.03, 242.8, 246.9, 249.95, 250.68,
+  252.2, 254.34];
 try {
   const c = JSON.parse(localStorage.getItem('chocopouce-calage') || 'null');
   if (Array.isArray(c) && c.length === CLIP.length) TEMPS_CLIP = c;
