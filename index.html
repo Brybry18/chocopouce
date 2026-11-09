@@ -35,7 +35,7 @@
   #b-saut { right: max(18px, env(safe-area-inset-right)); bottom: max(92px, calc(env(safe-area-inset-bottom) + 74px));
     background: radial-gradient(circle at 35% 30%, #f05050, #901020); }
   #b-pause { position: fixed; top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right));
-    width: 40px; height: 32px; border: 3px solid rgba(255, 255, 255, .5); background: rgba(40, 40, 60, .55); color: #fff;
+    width: 62px; height: 30px; border-radius: 15px; border: 3px solid rgba(255, 255, 255, .5); background: rgba(40, 40, 60, .55); color: #fff;
     font: bold 14px/1 monospace; display: grid; place-items: center; box-sizing: border-box; }
 </style>
 </head>
@@ -45,7 +45,7 @@
   <div class="pad" id="pad"><i class="h"></i><i class="v"></i><b class="fg"></b><b class="fd"></b><b class="fh"></b><b class="fb"></b></div>
   <div class="rond" id="b-pouce">POUCE</div>
   <div class="rond" id="b-saut">SAUT</div>
-  <div id="b-pause">II</div>
+  <div id="b-pause">START</div>
 </div>
 <script>
 'use strict';
@@ -71,6 +71,18 @@ const REGLAGES = {
   POUVOIR_DE_FACE: false,    // true : pendant le choco-noisette, les coups de face comptent aussi
   DUREE_ANIM_POUVOIR: 1.4,   // secondes de l'animation « CHOCO-NOISETTE ACTIVÉ ! » (le jeu est figé)
 };
+// Les quatre niveaux de difficulté, choisis après START. Chaque valeur multiplie les réglages ci-dessus :
+// retour (délai avant que les gardes se retournent), degats (vie perdue), vitesse (des gardes), sonne (secondes
+// pendant lesquelles le BOUM de l'atterrissage fige les gardes), vieBoss et boss (vie et vitesse du Général).
+const DIFFICULTES = [
+  { nom: 'CHOCOLAT AU LAIT', niveau: 'FACILE', tablette: ['#c8915a', '#a8703a', '#e8b880'], retour: 1.7, degats: 0.5, vitesse: 0.85, sonne: 2.6, vieBoss: 0.6, boss: 0.75 },
+  { nom: 'CHOCOLAT NOIR', niveau: 'NORMAL', tablette: ['#6a3a1a', '#4a2410', '#8a5a34'], retour: 1.3, degats: 0.75, vitesse: 0.95, sonne: 2.2, vieBoss: 0.8, boss: 0.9 },
+  { nom: 'CHOCOLAT 100 %', niveau: 'DIFFICILE', tablette: ['#3a1e0e', '#24120a', '#5a3420'], retour: 1, degats: 1, vitesse: 1, sonne: 1.8, vieBoss: 1, boss: 1 },
+  { nom: 'CHOCO-NOISETTE', niveau: 'TRÈS DIFFICILE', tablette: ['#7a4422', '#5a3014', '#9a6a3c'], noisettes: true, retour: 0.8, degats: 1.3, vitesse: 1.12, sonne: 1.2, vieBoss: 1.2, boss: 1.15 },
+];
+let difficulte = 1;
+try { const d = Number(localStorage.getItem('chocopouce-difficulte')); if (d >= 0 && d < DIFFICULTES.length && localStorage.getItem('chocopouce-difficulte') !== null) difficulte = d; } catch {}
+const D = () => DIFFICULTES[difficulte];
 
 // =====================================================================================
 //  Écran : 320 × 224 comme la Mega Drive, agrandi sans flou, bandes noires si besoin
@@ -124,7 +136,7 @@ const POLICE = {
   '!': '00100 00100 00100 00100 00100 00000 00100', '?': '01110 10001 00001 00010 00100 00000 00100',
   '.': '00000 00000 00000 00000 00000 00000 00100', ',': '00000 00000 00000 00000 00000 00100 01000',
   ':': '00000 00100 00000 00000 00000 00100 00000', '-': '00000 00000 00000 11111 00000 00000 00000',
-  "'": '00100 00100 01000 00000 00000 00000 00000', '/': '00001 00010 00010 00100 01000 01000 10000',
+  "'": '00100 00100 01000 00000 00000 00000 00000', '%': '11001 11010 00010 00100 01000 01011 10011', '/': '00001 00010 00010 00100 01000 01000 10000',
   '©': '01110 10001 10111 10101 10111 10001 01110', '·': '00000 00000 00000 00100 00000 00000 00000', '×': '00000 10001 01010 00100 01010 10001 00000',
   '+': '00000 00100 00100 11111 00100 00100 00000', ' ': '00000 00000 00000 00000 00000 00000 00000', '►': '10000 11000 11100 11110 11100 11000 10000',
 };
@@ -196,13 +208,13 @@ function bip(type, f0, f1, duree, vol = 0.4, debut = 0, sortie = maitre) {
   o.connect(v).connect(sortie);
   o.start(t); o.stop(t + duree + 0.03);
 }
-function bruit(duree, vol, f0, f1, debut = 0) {
+function bruit(duree, vol, f0, f1, debut = 0, sortie = maitre) {
   const t = actx.currentTime + debut;
   const s = actx.createBufferSource(), f = actx.createBiquadFilter(), v = actx.createGain();
   s.buffer = bruitBuf; f.type = 'bandpass'; f.Q.value = 1.2;
   f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + duree);
   v.gain.setValueAtTime(vol, t); v.gain.exponentialRampToValueAtTime(0.0008, t + duree);
-  s.connect(f).connect(v).connect(maitre);
+  s.connect(f).connect(v).connect(sortie);
   s.start(t); s.stop(t + duree + 0.03);
 }
 const SONS = {
@@ -277,12 +289,75 @@ function boucleChipDemarre() {
   boucleChip = { id: setInterval(planifier, 100), gain };
 }
 
+// ——— Les musiques des mondes : chiptune épique, dans l'esprit du générique ———
+// Chaque piste : la durée d'une double croche (T), la mélodie (une note MIDI par double croche, « . » = on tient
+// ou silence ; 4 mesures de 16), la note de basse de chaque mesure (racines) et son motif en croches (écarts en
+// demi-tons), les temps de grosse caisse et de caisse claire dans la mesure, et le son de la mélodie.
+const PISTES = {
+  // Monde 1 : la ville en chaos (la mineur, héroïque)
+  ville: { T: 0.115, timbre: 'square', racines: [45, 41, 48, 43], basse: [0, 0, 12, 0, 0, 12, 0, 7], kick: [0, 6, 8], caisse: [4, 12],
+    melo: '69 . 72 . 76 . 74 72 71 . 72 . 74 . . . 69 . 72 . 76 . 79 . 77 . 76 . 74 . . . 72 . 74 . 76 . 77 . 79 . 81 . 79 77 76 74 76 . . . 74 . 72 . 71 . 69 . . . . .' },
+  // Monde 2 : la forêt (ré mineur, aventure, flûte)
+  foret: { T: 0.125, timbre: 'triangle', racines: [38, 36, 34, 33], basse: [0, 7, 12, 7, 0, 7, 12, 7], kick: [0, 8], caisse: [4, 12],
+    melo: '62 . 65 . 69 . . . 67 . 65 . 64 . 62 . 60 . 64 . 67 . . . 65 . 64 . 62 . . . 62 . 65 . 69 . 72 . 71 . 69 . 67 . 69 . 65 . . . 64 . . . 62 . . . . . . .' },
+  // Monde 3 : le repaire (mi phrygien, menaçant)
+  repaire: { T: 0.11, timbre: 'square', racines: [40, 40, 36, 41], basse: [0, 0, 12, 0, 0, 1, 0, 12], kick: [0, 3, 8, 11], caisse: [4, 12],
+    melo: '64 . . 65 . . 64 . 67 . . 65 . . 64 . 64 . . 65 . . 64 . 71 . 70 . 67 . . . 76 . 74 . 72 . 71 . 72 . 71 . 69 . 67 . 65 . . . 64 . . . 63 . 64 . . . . .' },
+  // Le Général Constipax (rapide, intense)
+  boss: { T: 0.095, timbre: 'square', racines: [45, 45, 41, 40], basse: [0, 12, 0, 12, 0, 12, 0, 12], kick: [0, 4, 8, 12], caisse: [4, 12],
+    melo: '69 72 76 72 69 72 76 79 77 76 74 72 74 76 72 71 69 72 76 72 69 72 76 81 79 77 76 74 76 . 72 . 77 . 76 . 74 . 72 . 74 . 76 . 77 . 79 . 81 . 79 . 77 . 76 . 75 . 76 . . . . .' },
+};
+for (const p of Object.values(PISTES)) p.notes = p.melo.split(' ').filter(Boolean).map((x) => (x === '.' ? 0 : Number(x)));
+const hz = (n) => 440 * 2 ** ((n - 69) / 12);
+let musique = null;
+function jouerMusique(nom) {
+  if (!actx) return;
+  const P = PISTES[nom], notes = P.notes, n = notes.length;
+  const gain = actx.createGain(); gain.gain.value = 0.42; gain.connect(maitre);
+  let pas = 0, prochain = actx.currentTime + 0.08;
+  const planifier = () => {
+    while (prochain < actx.currentTime + 0.25) {
+      const d = Math.max(0, prochain - actx.currentTime), i = pas % n, k = i % 16;
+      const m = notes[i];
+      if (m) {
+        let long = 1;
+        while (long < 4 && !notes[(i + long) % n]) long++;
+        bip(P.timbre, hz(m), hz(m), P.T * long * 0.92, P.timbre === 'triangle' ? 0.16 : 0.06, d, gain);
+        bip('sawtooth', hz(m - 12), hz(m - 12), P.T * long * 0.8, 0.022, d, gain); // un peu de cuivre en dessous
+      }
+      if (k % 2 === 0) { const r = P.racines[Math.floor(i / 16) % P.racines.length] + P.basse[(k / 2) % 8]; bip('triangle', hz(r), hz(r), P.T * 1.8, 0.3, d, gain); }
+      if (P.kick.includes(k)) bip('sine', 150, 40, 0.13, 0.5, d, gain);
+      if (P.caisse.includes(k)) bruit(0.1, 0.16, 2200, 900, d, gain);
+      if (k % 2 === 0) bruit(0.03, 0.04, 8000, 7000, d, gain);
+      pas++; prochain += P.T;
+    }
+  };
+  planifier();
+  musique = { nom, id: setInterval(planifier, 60), gain };
+}
+function arreterMusique() {
+  if (!musique) return;
+  clearInterval(musique.id);
+  musique.gain.gain.setTargetAtTime(0, actx.currentTime, 0.12);
+  musique = null;
+}
+// La musique qui va avec l'écran : celle du monde en jeu, celle du Général pendant le combat, rien ailleurs
+// (l'écran titre, le menu et la victoire ont la chanson).
+const PISTE_MONDE = { 1: 'ville', 2: 'foret', 3: 'repaire' };
+function majMusique() {
+  if (!actx) return;
+  let voulue = null;
+  if (['jeu', 'pause', 'pouvoirAnim'].includes(etat)) voulue = boss ? (boss.etat === 'ko' ? null : 'boss') : PISTE_MONDE[monde];
+  if ((musique?.nom ?? null) !== voulue) { arreterMusique(); if (voulue) jouerMusique(voulue); }
+  if (musique) musique.gain.gain.value = etat === 'pause' ? 0.1 : etat === 'pouvoirAnim' ? 0.15 : 0.42;
+}
+
 // =====================================================================================
 //  Commandes : clavier (flèches, X coup, C saut, Entrée), croix et boutons tactiles
 // =====================================================================================
 const TOUCHES = { ArrowLeft: 'gauche', ArrowRight: 'droite', ArrowUp: 'haut', ArrowDown: 'bas', KeyX: 'coup', KeyC: 'saut', Space: 'saut', Enter: 'entree' };
 const clavier = {}, tenu = {};
-const fronts = { coup: false, saut: false, entree: false, nimporte: false };
+const fronts = { coup: false, saut: false, entree: false, nimporte: false, haut: false, bas: false };
 let dernierAppui = { dir: 0, t: -1 }, dashDemande = 0;
 const maintenant = () => performance.now() / 1000;
 // Deux appuis rapides sur la même direction : DASH.
@@ -318,6 +393,8 @@ function padMaj(e) {
   if (Math.abs(dy) < Math.abs(dx) * 0.45) ny = 0;
   if (Math.abs(dx) < Math.abs(dy) * 0.45) nx = 0;
   if (nx !== 0 && nx !== padDir.x) directionPressee(nx);
+  if (ny < 0 && padDir.y >= 0) fronts.haut = true;
+  if (ny > 0 && padDir.y <= 0) fronts.bas = true;
   padDir.x = nx; padDir.y = ny;
   fleches.fg.classList.toggle('actif', nx < 0); fleches.fd.classList.toggle('actif', nx > 0);
   fleches.fh.classList.toggle('actif', ny < 0); fleches.fb.classList.toggle('actif', ny > 0);
@@ -621,7 +698,7 @@ function dessinerVoyou(x, ox, oy, f, e, t) {
 const tmpEnnemi = toile(90, 90);
 function dessinerEnnemi(e, t) {
   const sx = e.x - cam, sy = e.z - e.h;
-  const pose = e.etat === 'ko' ? 'touche' : e.etat;
+  const pose = e.etat === 'ko' || e.etat === 'sonne' ? 'touche' : e.etat;
   if (e.etat === 'ko') {
     if (e.t > 0.9 && Math.floor(e.t * 16) % 2) return; // il clignote avant de disparaître
     // Il bascule en arrière et s'écrase par terre (dessiné à part puis tourné)
@@ -1084,20 +1161,20 @@ function majEnnemis(dt) {
       if (e.h < 0) { e.h = 0; e.vh = 0; e.vx *= 0.8; }
       continue;
     }
-    if (e.etat === 'touche' || e.etat === 'rigole') { e.t -= dt; if (e.t <= 0) e.etat = 'marche'; else continue; }
+    if (e.etat === 'touche' || e.etat === 'rigole' || e.etat === 'sonne') { e.t -= dt; if (e.t <= 0) { e.etat = 'marche'; e.tRetour = 0; } else continue; }
     const dx = hr.x - e.x, dz = hr.z - e.z;
     const vers = Math.sign(dx) || e.f;
     // Dépassé par le héros : il met un moment à se retourner (c'est le moment de frapper dans le dos)
     if (e.f !== vers && e.etat === 'marche') {
       e.tRetour += dt;
-      if (e.tRetour >= ty.delaiRetour()) { e.f = vers; e.tRetour = 0; e.alerte = 0.5; son('retourne'); }
+      if (e.tRetour >= ty.delaiRetour() * D().retour) { e.f = vers; e.tRetour = 0; e.alerte = 0.5; son('retourne'); }
     } else e.tRetour = 0;
     e.recharge -= dt;
     if (e.etat === 'prepare') {
       e.t -= dt;
       if (e.t <= 0) {
         e.etat = 'frappe'; e.t = 0.22;
-        if (Math.abs(hr.x - e.x) < ty.portee + 6 && Math.sign(hr.x - e.x) === e.f && Math.abs(dz) < 10 && hr.h < 30) blesser(ty.degats(), e.f);
+        if (Math.abs(hr.x - e.x) < ty.portee + 6 && Math.sign(hr.x - e.x) === e.f && Math.abs(dz) < 10 && hr.h < 30) blesser(ty.degats() * D().degats, e.f);
       }
       continue;
     }
@@ -1111,8 +1188,8 @@ function majEnnemis(dt) {
     }
     // Les voyous ne s'empilent pas les uns sur les autres
     for (const o of ennemis) if (o !== e && o.etat !== 'ko' && Math.abs(o.x - e.x) < 14 && Math.abs(o.z - e.z) < 6) mz += e.z < o.z ? -0.6 : 0.6;
-    e.x += mx * ty.vitesse * dt;
-    e.z = Math.max(ZMIN, Math.min(ZMAX, e.z + Math.sign(mz) * ty.vitesse * 0.6 * dt));
+    e.x += mx * ty.vitesse * D().vitesse * dt;
+    e.z = Math.max(ZMIN, Math.min(ZMAX, e.z + Math.sign(mz) * ty.vitesse * D().vitesse * 0.6 * dt));
     if (mx || mz) e.marche += dt * 9; else e.marche = 0;
     e.h = hauteurObstacle(e.x, e.z); // ils enjambent les troncs et les rochers
   }
@@ -1193,7 +1270,7 @@ const PHASES_BOSS = [
 ];
 const phaseBoss = () => { const k = boss.vie / boss.vieMax; return k > 2 / 3 ? 0 : k > 1 / 3 ? 1 : 2; };
 function nouveauBoss() {
-  boss = { x: cam + L + 40, z: 186, h: 0, vh: 0, f: -1, vie: REGLAGES.VIE_BOSS, vieMax: REGLAGES.VIE_BOSS, etat: 'entree', t: 0, marche: 0,
+  boss = { x: cam + L + 40, z: 186, h: 0, vh: 0, f: -1, vie: Math.round(REGLAGES.VIE_BOSS * D().vieBoss), vieMax: Math.round(REGLAGES.VIE_BOSS * D().vieBoss), etat: 'entree', t: 0, marche: 0,
     tRetour: 0, recharge: 2.2, phase: 0, bulle: null, flash: 0, koT: 0, combat: 0 };
 }
 function majBoss(dt) {
@@ -1209,11 +1286,11 @@ function majBoss(dt) {
     b.x -= 50 * dt; b.marche += dt * 8;
     if (b.x <= cam + L - 70) { b.etat = 'marche'; b.bulle = { str: 'GRRR !', t: 1.2 }; }
   } else if (b.etat === 'marche') {
-    if (b.f !== vers) { b.tRetour += dt; if (b.tRetour >= P.retour) { b.f = vers; b.tRetour = 0; son('retourne'); } } else b.tRetour = 0;
+    if (b.f !== vers) { b.tRetour += dt; if (b.tRetour >= P.retour * D().retour) { b.f = vers; b.tRetour = 0; son('retourne'); } } else b.tRetour = 0;
     let mx = 0, mz = 0;
     if (b.f === vers && Math.abs(dx) > 46) mx = vers;
     if (Math.abs(dz) > 4) mz = Math.sign(dz);
-    b.x += mx * P.vitesse * dt;
+    b.x += mx * P.vitesse * D().boss * dt;
     b.z = Math.max(ZMIN, Math.min(ZMAX, b.z + mz * P.vitesse * 0.5 * dt));
     b.marche = mx || mz ? b.marche + dt * 8 : 0;
     b.recharge -= dt;
@@ -1224,8 +1301,8 @@ function majBoss(dt) {
   } else if (b.etat === 'prepare') {
     if (b.t <= 0) { b.etat = 'charge'; b.t = 1.4; son('dash'); }
   } else if (b.etat === 'charge') {
-    b.x += b.f * P.charge * dt; b.marche += dt * 16;
-    if (Math.abs(hr.x - b.x) < 24 && Math.abs(dz) < 12 && hr.h < 40) blesser(14, b.f);
+    b.x += b.f * P.charge * D().boss * dt; b.marche += dt * 16;
+    if (Math.abs(hr.x - b.x) < 24 && Math.abs(dz) < 12 && hr.h < 40) blesser(14 * D().degats, b.f);
     if (Math.random() < 0.6) particules.push({ x: b.x - b.f * 10, z: b.z, h: 2, vx: -b.f * 40, vh: 15, vie: 0.4, max: 0.4, c: '#8a8a94', taille: 2, poussiere: true });
     const bord = b.f > 0 ? cam + L - 18 : cam + 18;
     if ((b.f > 0 && b.x >= bord) || (b.f < 0 && b.x <= bord)) {
@@ -1241,7 +1318,7 @@ function majBoss(dt) {
       b.h = 0; b.vh = 0; b.etat = 'marche'; b.recharge = P.recharge;
       secousse = 0.35; son('boum');
       effets.push({ type: 'onde', x: b.x, z: b.z, t: 0, duree: 0.5 });
-      if (hr.h < 8 && Math.abs(hr.x - b.x) < 110 && Math.abs(dz) < 26) blesser(10, Math.sign(hr.x - b.x) || 1);
+      if (hr.h < 8 && Math.abs(hr.x - b.x) < 110 && Math.abs(dz) < 26) blesser(10 * D().degats, Math.sign(hr.x - b.x) || 1);
     }
   } else if (b.etat === 'etourdi') {
     if (b.t <= 0) { b.etat = 'marche'; b.recharge = P.recharge; }
@@ -1364,6 +1441,18 @@ function blesser(degats, dir) {
   son('aie'); secousse = 0.15;
   if (hr.vie <= 0) { changerEtat('gameover'); son('gameover'); }
 }
+// « Il saute pas, il flash » : à l'atterrissage, le BOUM fait trembler le sol et sonne les gardes autour ; ils restent
+// figés (sans pouvoir se retourner) le temps de passer derrière eux. Le Général, lui, vacille un instant.
+function sonnerGardes() {
+  const hr = heros;
+  effets.push({ type: 'onde', x: hr.x, z: hr.z, t: 0, duree: 0.45 });
+  for (const e of ennemis) {
+    if (e.etat === 'ko' || e.h > 0 || Math.abs(e.x - hr.x) > 120 || Math.abs(e.z - hr.z) > 40) continue;
+    e.etat = 'sonne'; e.t = D().sonne; e.tRetour = 0;
+  }
+  const b = boss;
+  if (b && ['marche', 'prepare'].includes(b.etat) && Math.abs(b.x - hr.x) < 120 && Math.abs(b.z - hr.z) < 40) { b.etat = 'etourdi'; b.t = D().sonne * 0.5; }
+}
 function texteFlottant(str, x, z, h, couleur, duree) { effets.push({ type: 'texte', str, x, z, h, couleur, t: 0, duree }); }
 // Les vagues : la caméra s'arrête, les voyous arrivent par les deux côtés ; tous K.O., « GO ► ».
 function majVagues(dt) {
@@ -1454,6 +1543,7 @@ function majHeros(dt) {
     hr.vh -= REGLAGES.GRAVITE * dt;
     if (hr.h <= 0) {
       hr.h = 0; hr.vh = 0; hr.dashAir = false; hr.atterT = 0.14;
+      sonnerGardes();
       son('boum'); secousse = 0.18;
       effets.push({ type: 'boum', x: hr.x, z: hr.z, t: 0, duree: 0.6 });
       for (let i = 0; i < 12; i++) { const s = i % 2 ? 1 : -1; particules.push({ x: hr.x + s * (4 + Math.random() * 10), z: hr.z + (Math.random() * 4 - 2), h: 1, vx: s * (25 + Math.random() * 55), vh: 10 + Math.random() * 28, vie: 0.45, max: 0.45, c: Math.random() < 0.5 ? '#c8b8a8' : '#8a7a6a', taille: 2, poussiere: true }); }
@@ -1610,6 +1700,7 @@ function dessinerJeu(t) {
   for (const e of ennemis) {
     const sx = e.x - cam, sy = e.z - e.h - 74;
     if (e.bulle) texte(e.bulle.str, sx, sy, '#ffffff', 1, '#5a0808', 'c');
+    else if (e.etat === 'sonne') for (let i = 0; i < 3; i++) { const a = t * 6 + (i * Math.PI * 2) / 3; etincelle(sx + Math.cos(a) * 11, sy + 10 + Math.sin(a) * 3, 2, '#ffe040'); }
     else if (e.alerte > 0) texte('!', sx, sy, '#ff4040', 2, '#000', 'c');
     else if (e.etat === 'marche' && e.tRetour > TYPES_ENNEMIS[e.type].delaiRetour() * 0.45) texte('?', sx, sy, '#ffe040', 1, '#000', 'c');
   }
@@ -2359,6 +2450,44 @@ function musiqueVictoire() {
   else boucleChipDemarre();
 }
 
+// Le menu de difficulté, après START : quatre tablettes de chocolat, de la plus douce à la plus corsée.
+let toucheMenu = null;
+cv.addEventListener('pointerdown', (e) => {
+  const r = cv.getBoundingClientRect();
+  toucheMenu = { x: ((e.clientX - r.left) * L) / r.width, y: ((e.clientY - r.top) * H) / r.height };
+});
+const optionMenu = (p) => DIFFICULTES.findIndex((_, i) => p.x > 20 && p.x < 300 && p.y > 40 + i * 40 && p.y < 76 + i * 40);
+function tablette(x, y, d, t) {
+  const [c, ombre, clair] = d.tablette;
+  g.fillStyle = '#140804'; g.fillRect(x - 1, y - 1, 46, 28);
+  g.fillStyle = ombre; g.fillRect(x, y, 44, 26);
+  for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) {
+    const px = x + 2 + i * 11, py = y + 2 + j * 12;
+    g.fillStyle = c; g.fillRect(px, py, 9, 10);
+    g.fillStyle = clair; g.fillRect(px, py, 9, 1); g.fillRect(px, py, 1, 10);
+    if (d.noisettes) { g.fillStyle = '#e8c890'; g.fillRect(px + 3 + (i % 2), py + 3 + j, 3, 3); g.fillStyle = '#b08850'; g.fillRect(px + 4 + (i % 2), py + 5 + j, 2, 1); }
+  }
+  // Un reflet qui passe sur la tablette choisie
+  if (t) { const k = Math.round(((t * 40) % 90) - 20); g.fillStyle = 'rgba(255,255,255,0.35)'; for (let j = 0; j < 26; j++) if (k + j / 2 >= 0 && k + j / 2 < 44) g.fillRect(x + Math.round(k + j / 2), y + j, 2, 1); }
+}
+function dessinerMenu() {
+  const t = tEtat;
+  rayons(160, 112, t * 0.3, '#2a1004', '#3a1608', 16);
+  texte('CHOISIS TON CHOCOLAT', L / 2, 12, OR, 2, '#3a0a00', 'c');
+  DIFFICULTES.forEach((d, i) => {
+    const y = 42 + i * 40, sel = i === difficulte;
+    if (sel) {
+      g.fillStyle = 'rgba(255,220,120,0.16)'; g.fillRect(22, y - 2, 276, 36);
+      g.fillStyle = '#ffd040'; g.fillRect(22, y - 2, 276, 1); g.fillRect(22, y + 33, 276, 1); g.fillRect(22, y - 2, 1, 36); g.fillRect(297, y - 2, 1, 36);
+    }
+    tablette(36, y + 3, d, sel ? t : 0);
+    texte(d.nom, 90, y + 6, sel ? OR : '#c8b0a0', 2, sel ? '#3a0a00' : '#1a0a04');
+    texte(d.niveau, 90, y + 23, sel ? '#ffe040' : '#8a7a6a', 1, '#000');
+    if (sel && Math.floor(t * 4) % 2 === 0) texte('►', 27, y + 12, '#ffe040', 1, '#000');
+  });
+  texte(tactile ? 'TOUCHE TON CHOCOLAT' : 'HAUT / BAS, PUIS START', L / 2, 212, '#ffffff', 1, '#000', 'c');
+}
+
 function basculerPause() {
   if (etat === 'jeu') { changerEtat('pause'); son('pause'); }
   else if (etat === 'pause') { changerEtat('jeu'); son('pause'); }
@@ -2381,7 +2510,7 @@ function mettreAJour(dt) {
   } else if (etat === 'titre') {
     if (fondu > 0) {
       fondu += dt * 2.5;
-      if (fondu >= 1) { fondu = 0; musiqueTitre(false); nouvellePartie(); changerEtat('monde'); son('monde'); }
+      if (fondu >= 1) { fondu = 0; changerEtat('menu'); }
     } else if (tEtat > 0.6 && (fronts.entree || (!CALAGE && (fronts.coup || fronts.saut || (tactile && fronts.nimporte))))) {
       son('start'); fondu = 0.01;
     }
@@ -2394,6 +2523,17 @@ function mettreAJour(dt) {
   } else if (etat === 'pouvoirAnim') {
     // Le jeu est figé le temps de l'énorme pouce
     if (tEtat >= REGLAGES.DUREE_ANIM_POUVOIR) { etat = 'jeu'; tEtat = 0; }
+  } else if (etat === 'menu') {
+    // Choisir son chocolat : haut / bas (clavier ou croix), START pour valider ; au doigt, toucher la tablette
+    if (fronts.haut) { difficulte = (difficulte + DIFFICULTES.length - 1) % DIFFICULTES.length; son('pause'); }
+    if (fronts.bas) { difficulte = (difficulte + 1) % DIFFICULTES.length; son('pause'); }
+    let choisi = tEtat > 0.4 && (fronts.entree || fronts.coup || fronts.saut);
+    if (toucheMenu && tEtat > 0.4) { const i = optionMenu(toucheMenu); if (i >= 0) { difficulte = i; choisi = true; } }
+    toucheMenu = null;
+    if (choisi) {
+      try { localStorage.setItem('chocopouce-difficulte', String(difficulte)); } catch {}
+      son('start'); musiqueTitre(false); nouvellePartie(); changerEtat('monde'); son('monde');
+    }
   } else if (etat === 'monde') {
     // L'écran « MONDE n » avant le niveau
     if (tEtat > 3.2 || (tEtat > 0.8 && (fronts.entree || fronts.coup || fronts.saut))) changerEtat('jeu');
@@ -2419,6 +2559,8 @@ function mettreAJour(dt) {
     accueilT += dt;
     if (accueilT > DUREE_ACCUEIL) { accueilT = 0; generique.currentTime = 0; generique.play().catch(() => {}); }
   }
+  if (etat !== 'menu') toucheMenu = null;
+  majMusique();
   for (const k in fronts) fronts[k] = false;
 }
 function dessiner(dt) {
@@ -2429,6 +2571,7 @@ function dessiner(dt) {
   } else if (etat === 'boot') dessinerBoot();
   else if (etat === 'titre') dessinerClip(tempsClip(), dt);
   else if (etat === 'monde') dessinerEcranMonde();
+  else if (etat === 'menu') dessinerMenu();
   else if (etat === 'victoire') dessinerVictoire();
   else {
     dessinerJeu(tJeu);
@@ -2470,7 +2613,8 @@ function dessiner(dt) {
     if (etat === 'pause') {
       g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(0, 0, L, H);
       texte('PAUSE', L / 2, 96, ['#ffffff', '#fff8d0', '#ffe890', '#ffd850', '#ffc830', '#ffb820', '#ffa810'], 3, '#3a0a00', 'c');
-      texte(tactile ? 'II POUR REPRENDRE' : 'ENTRÉE POUR REPRENDRE', L / 2, 130, '#fff', 1, '#000', 'c');
+      texte(tactile ? 'START POUR REPRENDRE' : 'ENTRÉE POUR REPRENDRE', L / 2, 130, '#fff', 1, '#000', 'c');
+      texte(D().nom, L / 2, 150, '#c8a070', 1, '#000', 'c');
     }
   }
 }
