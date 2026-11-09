@@ -239,6 +239,20 @@ const SONS = {
     bip('square', 1568, 1568, 0.7, 0.16, 0.42); bip('triangle', 784, 784, 0.9, 0.35, 0.42); bruit(0.5, 0.3, 3000, 8000, 0.42);
   },
   monde() { [392, 523, 659, 784].forEach((f, i) => bip('square', f, f, 0.16, 0.14, i * 0.14)); bip('square', 1046, 1046, 0.5, 0.14, 0.56); bip('triangle', 131, 131, 0.9, 0.3, 0.56); },
+  pouf() { bruit(0.25, 0.7, 700, 80); bip('sine', 240, 55, 0.22, 0.45); },
+  // Un cri « AAAAH ! » de dessin animé : une voix en dents de scie qui monte puis retombe, avec du vibrato
+  cri() {
+    const t = actx.currentTime, h = 0.85 + Math.random() * 0.4;
+    const o = actx.createOscillator(), lfo = actx.createOscillator(), prof = actx.createGain(), f = actx.createBiquadFilter(), v = actx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(480 * h, t); o.frequency.linearRampToValueAtTime(660 * h, t + 0.25); o.frequency.exponentialRampToValueAtTime(240 * h, t + 1.1);
+    lfo.frequency.value = 7; prof.gain.value = 24; lfo.connect(prof).connect(o.frequency);
+    f.type = 'bandpass'; f.frequency.value = 1050; f.Q.value = 1.4;
+    v.gain.setValueAtTime(0.0001, t); v.gain.exponentialRampToValueAtTime(0.3, t + 0.05); v.gain.setValueAtTime(0.3, t + 0.7); v.gain.exponentialRampToValueAtTime(0.0008, t + 1.15);
+    o.connect(f).connect(v).connect(maitre);
+    o.start(t); lfo.start(t); o.stop(t + 1.2); lfo.stop(t + 1.2);
+  },
+  etoile() { bip('square', 2093, 2093, 0.1, 0.08); bip('square', 2637, 2637, 0.18, 0.08, 0.08); },
   gameover() { [392, 370, 349, 330].forEach((f, i) => bip('square', f, f * 0.98, 0.32, 0.16, i * 0.34)); bip('triangle', 165, 82, 1.2, 0.35, 1.36); },
 };
 const son = (n) => { if (actx && actx.state === 'running') SONS[n](); };
@@ -347,7 +361,7 @@ const PISTE_MONDE = { 1: 'ville', 2: 'foret', 3: 'repaire' };
 function majMusique() {
   if (!actx) return;
   let voulue = null;
-  if (['jeu', 'pause', 'pouvoirAnim'].includes(etat)) voulue = boss ? (boss.etat === 'ko' ? null : 'boss') : PISTE_MONDE[monde];
+  if (['jeu', 'pause', 'pouvoirAnim'].includes(etat)) voulue = boss ? (['ko', 'envole'].includes(boss.etat) ? null : 'boss') : PISTE_MONDE[monde];
   if ((musique?.nom ?? null) !== voulue) { arreterMusique(); if (voulue) jouerMusique(voulue); }
   if (musique) musique.gain.gain.value = etat === 'pause' ? 0.1 : etat === 'pouvoirAnim' ? 0.15 : 0.42;
 }
@@ -698,7 +712,14 @@ function dessinerVoyou(x, ox, oy, f, e, t) {
 const tmpEnnemi = toile(90, 90);
 function dessinerEnnemi(e, t) {
   const sx = e.x - cam, sy = e.z - e.h;
-  const pose = e.etat === 'ko' || e.etat === 'sonne' ? 'touche' : e.etat;
+  const pose = ['ko', 'sonne', 'envole'].includes(e.etat) ? 'touche' : e.etat;
+  if (e.etat === 'envole') {
+    const c = tmpEnnemi.getContext('2d');
+    c.clearRect(0, 0, 90, 90);
+    dessinerVoyou(c, 45, 80, e.f, { pose, type: e.type }, t);
+    g.save(); g.translate(Math.round(sx), Math.round(sy - 34)); g.rotate(e.t * 11 * (e.koDir || 1)); g.drawImage(tmpEnnemi, -45, -46); g.restore();
+    return;
+  }
   if (e.etat === 'ko') {
     if (e.t > 0.9 && Math.floor(e.t * 16) % 2) return; // il clignote avant de disparaître
     // Il bascule en arrière et s'écrase par terre (dessiné à part puis tourné)
@@ -1156,6 +1177,12 @@ function majEnnemis(dt) {
     const ty = TYPES_ENNEMIS[e.type];
     e.alerte = Math.max(0, e.alerte - dt);
     if (e.bulle) { e.bulle.t -= dt; if (e.bulle.t <= 0) e.bulle = null; }
+    if (e.etat === 'envole') {
+      // Il file vers le ciel en tournoyant ; tout là-haut, une petite étoile scintille
+      e.t += dt; e.x += e.vx * dt; e.h += e.vh * dt; e.vh += 240 * dt;
+      if (!e.etoile && e.z - e.h < -20) { e.etoile = true; effets.push({ type: 'etoile', x: e.x, t: 0, duree: 0.8 }); son('etoile'); }
+      continue;
+    }
     if (e.etat === 'ko') {
       e.t += dt; e.x += e.vx * dt; e.h += e.vh * dt; e.vh -= 600 * dt;
       if (e.h < 0) { e.h = 0; e.vh = 0; e.vx *= 0.8; }
@@ -1187,19 +1214,19 @@ function majEnnemis(dt) {
       if (Math.abs(dx) <= ty.portee && Math.abs(dz) < 8 && e.recharge <= 0 && hr.vie > 0) { e.etat = 'prepare'; e.t = ty.preparation; continue; }
     }
     // Les voyous ne s'empilent pas les uns sur les autres
-    for (const o of ennemis) if (o !== e && o.etat !== 'ko' && Math.abs(o.x - e.x) < 14 && Math.abs(o.z - e.z) < 6) mz += e.z < o.z ? -0.6 : 0.6;
+    for (const o of ennemis) if (o !== e && !['ko', 'envole'].includes(o.etat) && Math.abs(o.x - e.x) < 14 && Math.abs(o.z - e.z) < 6) mz += e.z < o.z ? -0.6 : 0.6;
     e.x += mx * ty.vitesse * D().vitesse * dt;
     e.z = Math.max(ZMIN, Math.min(ZMAX, e.z + Math.sign(mz) * ty.vitesse * D().vitesse * 0.6 * dt));
     if (mx || mz) e.marche += dt * 9; else e.marche = 0;
     e.h = hauteurObstacle(e.x, e.z); // ils enjambent les troncs et les rochers
   }
-  ennemis = ennemis.filter((e) => !(e.etat === 'ko' && e.t > 1.3));
+  ennemis = ennemis.filter((e) => !(e.etat === 'ko' && e.t > 1.3) && !(e.etat === 'envole' && e.t > 2.5));
 }
 // Le coup de pouce : il ne fait mal que dans le dos (règle de ChocoPouce) ; de face, « TING » et le voyou rigole.
 function frapper() {
   const hr = heros, max = pouvoir > 0 ? 2 : 1;
   const cibles = ennemis
-    .filter((e) => e.etat !== 'ko' && Math.abs(e.z - hr.z) < 11 && Math.abs(e.h - hr.h) < 40 && (e.x - hr.x) * hr.f > 0 && (e.x - hr.x) * hr.f < 36)
+    .filter((e) => !['ko', 'envole'].includes(e.etat) && Math.abs(e.z - hr.z) < 11 && Math.abs(e.h - hr.h) < 40 && (e.x - hr.x) * hr.f > 0 && (e.x - hr.x) * hr.f < 36)
     .sort((a, b) => Math.abs(a.x - hr.x) - Math.abs(b.x - hr.x)).slice(0, max);
   for (const e of cibles) {
     hr.choco = true; // du chocolat au bout du pouce dès le premier coup porté
@@ -1214,7 +1241,7 @@ function frapper() {
   }
   // Le Général Constipax
   const b = boss;
-  if (b && !['ko', 'entree'].includes(b.etat) && Math.abs(b.z - hr.z) < 14 && Math.abs(b.h - hr.h) < 50 && (b.x - hr.x) * hr.f > 0 && (b.x - hr.x) * hr.f < 44) toucherBoss();
+  if (b && !['ko', 'entree', 'envole'].includes(b.etat) && Math.abs(b.z - hr.z) < 14 && Math.abs(b.h - hr.h) < 50 && (b.x - hr.x) * hr.f > 0 && (b.x - hr.x) * hr.f < 44) toucherBoss();
 }
 // Le Général : dans le dos, un coup lui retire un point de vie. Le pouce CHOCO-NOISETTE, lui, fait mouche de n'importe
 // quel côté et lui retire la moitié de sa vie : chargé, ChocoPouce le met K.O. en quelques secondes (comme dans la chanson).
@@ -1242,8 +1269,16 @@ function toucherBoss() {
   score += 200 * degats;
   const hx = b.x - hr.f * 12, hy = 52;
   for (let i = 0; i < 10; i++) particules.push({ x: hx, z: b.z, h: hy, vx: (Math.random() * 2 - 1) * 100, vh: Math.random() * 100, vie: 0.35, max: 0.35, c: i % 2 ? '#fff6a0' : '#ffffff', taille: 1 });
-  for (let i = 0; i < 6; i++) particules.push({ x: hx, z: b.z, h: hy, vx: hr.f * (30 + Math.random() * 60), vh: 20 + Math.random() * 60, vie: 0.5, max: 0.5, c: PAL.choco, taille: 2 });
+  gouttesChoco(hx, b.z, hy, hr.f, 6);
   effets.push({ type: 'eclat', x: hx, z: b.z, h: hy, t: 0, duree: 0.15 });
+  if (b.vie <= 0 && degats > 1) {
+    b.etat = 'envole'; b.koT = 0; b.vh = 100; b.vx = hr.f * 30; b.koDir = hr.f;
+    b.bulle = { str: 'NOOOOOON !', t: 4 };
+    son('pouf'); setTimeout(() => son('cri'), 70); secousse = 0.5;
+    texteFlottant('POUF!', b.x, b.z, 50, '#ffffff', 0.8);
+    score += 10000;
+    return;
+  }
   if (b.vie <= 0) {
     b.etat = 'ko'; b.koT = 0; b.vx = hr.f * 70; b.koDir = hr.f;
     son('ko'); secousse = 0.5;
@@ -1278,7 +1313,7 @@ function majBoss(dt) {
   if (!b) return;
   if (b.bulle) { b.bulle.t -= dt; if (b.bulle.t <= 0) b.bulle = null; }
   if (b.flash > 0) b.flash -= dt;
-  if (b.etat !== 'ko' && b.etat !== 'entree') b.combat += dt; // le chrono du combat (gag : K.O. en moins de 5 s)
+  if (!['ko', 'entree', 'envole'].includes(b.etat)) b.combat += dt; // le chrono du combat (gag : K.O. en moins de 5 s)
   const P = PHASES_BOSS[b.phase];
   const dx = hr.x - b.x, dz = hr.z - b.z, vers = Math.sign(dx) || b.f;
   b.t -= dt;
@@ -1324,11 +1359,15 @@ function majBoss(dt) {
     if (b.t <= 0) { b.etat = 'marche'; b.recharge = P.recharge; }
   } else if (b.etat === 'colere') {
     if (b.t <= 0) { b.etat = 'marche'; b.recharge = 1; }
+  } else if (b.etat === 'envole') {
+    b.koT += dt; b.h += b.vh * dt; b.vh += 190 * dt; b.x += b.vx * dt;
+    if (!b.etoile && b.z - b.h < -30) { b.etoile = true; effets.push({ type: 'etoile', x: b.x, t: 0, duree: 1 }); son('etoile'); }
+    if (b.koT > 3 && etat === 'jeu') { bossFait = true; changerEtat('victoire'); son('pouvoir'); musiqueVictoire(); }
   } else if (b.etat === 'ko') {
     b.koT += dt; b.x += b.vx * dt; b.vx *= 0.94;
     if (b.koT > 3 && etat === 'jeu') { bossFait = true; changerEtat('victoire'); son('pouvoir'); musiqueVictoire(); }
   }
-  if (b.etat !== 'ko') b.x = Math.max(cam + 16, Math.min(cam + L - 16, b.x));
+  if (!['ko', 'envole'].includes(b.etat)) b.x = Math.max(cam + 16, Math.min(cam + L - 16, b.x));
 }
 
 // Le Général en entier (combat) : grand, bedonnant, uniforme vert, képi, visage rouge de colère, grosse moustache.
@@ -1376,6 +1415,14 @@ function dessinerGeneral(x, ox, oy, f, e, t) {
 const tmpBoss = toile(120, 110);
 function dessinerBoss(t) {
   const b = boss, sx = b.x - cam, sy = b.z - b.h;
+  if (b.etat === 'envole') {
+    const c = tmpBoss.getContext('2d');
+    c.clearRect(0, 0, 120, 110);
+    dessinerGeneral(c, 60, 104, b.f, { pose: 'etourdi', phase: 2 }, t);
+    g.save(); g.translate(Math.round(sx), Math.round(sy - 48)); g.rotate(b.koT * 9 * (b.koDir || 1)); g.drawImage(tmpBoss, -60, -56); g.restore();
+    if (b.bulle) texte(b.bulle.str, sx, sy - 20, '#ffffff', 1, '#3a0808', 'c');
+    return;
+  }
   if (b.etat === 'ko') {
     if (b.koT > 2.4 && Math.floor(b.koT * 16) % 2) return;
     const c = tmpBoss.getContext('2d');
@@ -1398,6 +1445,11 @@ function dessinerBoss(t) {
   g.globalAlpha = 1;
   if (b.bulle) texte(b.bulle.str, sx, sy - 108, '#ffffff', 1, '#3a0808', 'c');
 }
+// Des éclats de chocolat liquide qui volent du pouce
+function gouttesChoco(x, z, h, f, n) {
+  for (let i = 0; i < n; i++) particules.push({ x, z: z + (Math.random() * 4 - 2), h, vx: f * (40 + Math.random() * 90) + (Math.random() * 2 - 1) * 20, vh: 40 + Math.random() * 90,
+    vie: 2, max: 2, c: Math.random() < 0.3 ? PAL.chocoClair : PAL.choco, taille: Math.random() < 0.4 ? 3 : 2, goutte: true });
+}
 function toucher(e) {
   const hr = heros;
   e.vie -= pouvoir > 0 ? e.vie : 1;
@@ -1408,11 +1460,16 @@ function toucher(e) {
   // Étincelles et éclaboussures de chocolat
   const hx = e.x - hr.f * 8, hy = e.h + 40;
   for (let i = 0; i < 8; i++) particules.push({ x: hx, z: e.z, h: hy, vx: (Math.random() * 2 - 1) * 90, vh: Math.random() * 90, vie: 0.3, max: 0.3, c: i % 2 ? '#fff6a0' : '#ffffff', taille: 1 });
-  for (let i = 0; i < 5; i++) particules.push({ x: hx, z: e.z, h: hy, vx: hr.f * (30 + Math.random() * 60), vh: 20 + Math.random() * 60, vie: 0.5, max: 0.5, c: PAL.choco, taille: 2 });
+  gouttesChoco(hx, e.z, hy, hr.f, 5);
   effets.push({ type: 'eclat', x: hx, z: e.z, h: hy, t: 0, duree: 0.15 });
   if (e.vie <= 0) {
-    e.etat = 'ko'; e.t = 0; e.vx = hr.f * 110; e.vh = 150; e.koDir = hr.f;
-    son('ko');
+    if (pouvoir > 0) {
+      e.etat = 'envole'; e.t = 0; e.vx = hr.f * 40; e.vh = 120; e.koDir = hr.f;
+      e.bulle = { str: 'AAAAH !', t: 3 };
+      son('pouf'); setTimeout(() => son('cri'), 70);
+      texteFlottant('POUF!', e.x, e.z, 40, '#ffffff', 0.7);
+      for (let i = 0; i < 10; i++) particules.push({ x: e.x, z: e.z, h: 4, vx: (Math.random() * 2 - 1) * 80, vh: 10 + Math.random() * 20, vie: 0.5, max: 0.5, c: '#d8d0c8', taille: 3, poussiere: true });
+    } else { e.etat = 'ko'; e.t = 0; e.vx = hr.f * 110; e.vh = 150; e.koDir = hr.f; son('ko'); }
     score += 500 * (pouvoir > 0 ? 2 : 1);
     texteFlottant(pouvoir > 0 ? '+1000' : '+500', e.x, e.z, 70, '#ffe040', 0.8);
     ennemiTue();
@@ -1447,7 +1504,7 @@ function sonnerGardes() {
   const hr = heros;
   effets.push({ type: 'onde', x: hr.x, z: hr.z, t: 0, duree: 0.45 });
   for (const e of ennemis) {
-    if (e.etat === 'ko' || e.h > 0 || Math.abs(e.x - hr.x) > 120 || Math.abs(e.z - hr.z) > 40) continue;
+    if (['ko', 'envole'].includes(e.etat) || e.h > 0 || Math.abs(e.x - hr.x) > 120 || Math.abs(e.z - hr.z) > 40) continue;
     e.etat = 'sonne'; e.t = D().sonne; e.tRetour = 0;
   }
   const b = boss;
@@ -1478,7 +1535,7 @@ function majVagues(dt) {
         if (type === 'caid') { texteFlottant('LE CAÏD !', cam + L / 2, 120, 0, '#ff4040', 2); son('retourne'); secousse = 0.2; }
         vague.prochain = 0.9;
       }
-    } else if (!ennemis.some((e) => e.etat !== 'ko')) {
+    } else if (!ennemis.some((e) => !['ko', 'envole'].includes(e.etat))) {
       vague = null; bloque = false;
       goT = 2.5; son('go');
     }
@@ -1511,7 +1568,10 @@ function majHeros(dt) {
   // Coup de pouce
   if (fronts.coup && hr.coupT <= 0 && hr.dashT <= 0 && hr.blesseT <= 0) { hr.coupT = 0.26; hr.coupFait = false; son('coup'); }
   if (hr.coupT > 0) hr.coupT -= dt;
-  if (!hr.coupFait && hr.coupT < 0.2) { hr.coupFait = true; frapper(); }
+  if (!hr.coupFait && hr.coupT < 0.2) {
+    hr.coupFait = true; frapper();
+    if (hr.choco && Math.random() < 0.55) gouttesChoco(hr.x + hr.f * 20, hr.z, hr.h + 50, hr.f, 2 + Math.floor(Math.random() * 3));
+  }
   if (hr.atterT > 0) hr.atterT -= dt;
   if (hr.invT > 0) hr.invT -= dt;
   // Pendant le pouvoir, le pouce laisse des miettes de noisette
@@ -1569,7 +1629,11 @@ function majHeros(dt) {
 function majParticules(dt) {
   for (const p of particules) {
     p.vie -= dt; p.x += p.vx * dt; p.h += p.vh * dt;
-    if (p.poussiere) { p.vx *= 0.9; p.vh -= 40 * dt; if (p.h < 0) p.h = 0; } else p.vh -= 120 * dt;
+    if (p.poussiere) { p.vx *= 0.9; p.vh -= 40 * dt; if (p.h < 0) p.h = 0; }
+    else if (p.goutte) {
+      p.vh -= 340 * dt;
+      if (p.h <= 0) { p.vie = 0; effets.push({ type: 'tache', x: p.x, z: p.z, t: 0, duree: 2.5, taille: p.taille }); }
+    } else p.vh -= 120 * dt;
   }
   particules = particules.filter((p) => p.vie > 0);
   for (const e of effets) e.t += dt;
@@ -1647,6 +1711,13 @@ function dessinerJeu(t) {
   g.save(); g.translate(sx, sy);
   dessinerDecor(cam, t);
   dessinerRue(t);
+  // Les petites taches de chocolat par terre
+  for (const e of effets) if (e.type === 'tache') {
+    g.globalAlpha = Math.min(1, (e.duree - e.t) / 0.8);
+    g.fillStyle = PAL.choco; g.fillRect(Math.round(e.x - cam) - e.taille, Math.round(e.z), e.taille * 2 + 1, 2);
+    g.fillStyle = PAL.chocoClair; g.fillRect(Math.round(e.x - cam) - 1, Math.round(e.z), 1, 1);
+    g.globalAlpha = 1;
+  }
   const hr = heros;
   ombre(Math.round(hr.x - cam), Math.round(hr.z), hr.h);
   // Traînée du dash : des copies qui s'effacent
@@ -1696,9 +1767,10 @@ function dessinerJeu(t) {
   for (const e of effets) {
     if (e.type === 'eclat') { const r = Math.round(4 + e.t * 50); etincelle(e.x - cam, e.z - e.h, r, '#ffffff'); etincelle(e.x - cam, e.z - e.h, Math.round(r / 2), '#fff060'); }
     if (e.type === 'texte') texte(e.str, e.x - cam, e.z - e.h - e.t * 24, e.couleur, 1, '#000', 'c');
+    if (e.type === 'etoile') { const r = Math.round(Math.sin((e.t / e.duree) * Math.PI) * 7); if (r > 0) { etincelle(e.x - cam, 26, r, '#ffffff'); etincelle(e.x - cam, 26, Math.max(1, r - 3), '#ffe040'); } }
   }
   for (const e of ennemis) {
-    const sx = e.x - cam, sy = e.z - e.h - 74;
+    const sx = e.x - cam, sy = e.z - e.h - (e.etat === 'envole' ? 8 : 74);
     if (e.bulle) texte(e.bulle.str, sx, sy, '#ffffff', 1, '#5a0808', 'c');
     else if (e.etat === 'sonne') for (let i = 0; i < 3; i++) { const a = t * 6 + (i * Math.PI * 2) / 3; etincelle(sx + Math.cos(a) * 11, sy + 10 + Math.sin(a) * 3, 2, '#ffe040'); }
     else if (e.alerte > 0) texte('!', sx, sy, '#ff4040', 2, '#000', 'c');
@@ -2629,7 +2701,7 @@ function boucle() {
 }
 requestAnimationFrame(boucle);
 // « index.html?test » : l'état du jeu lisible depuis la console (pour les essais automatiques)
-if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque, monde, boss, obstacles, set pouvoir(v) { pouvoir = v; }, set jauge(v) { jauge = v; }, accueilT, generiqueOK, fini: generique.ended, temps: generique.currentTime, duree: generique.duration });
+if (new URLSearchParams(location.search).has('test')) window.__jeu = () => ({ etat, heros, ennemis, jauge, pouvoir, score, cam, bloque, monde, boss, obstacles, get pouvoir() { return pouvoir; }, set pouvoir(v) { pouvoir = v; }, get jauge() { return jauge; }, set jauge(v) { jauge = v; }, accueilT, generiqueOK, fini: generique.ended, temps: generique.currentTime, duree: generique.duration });
 </script>
 </body>
 </html>
