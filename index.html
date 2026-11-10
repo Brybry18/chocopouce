@@ -263,18 +263,39 @@ const SOURCES_GENERIQUE = ['generique.aac', 'generique.mp3', 'generique.m4a'];
 const generique = new Audio();
 generique.loop = false; // à la fin de la chanson : l'écran d'accueil, puis le clip recommence
 generique.preload = 'auto';
-let generiqueOK = false, sourceGenerique = 0;
+let generiqueOK = false, sourceGenerique = 0, generiqueVoulu = false, generiqueAmorce = false;
 generique.addEventListener('canplay', () => { generiqueOK = true; });
+generique.addEventListener('playing', () => { if (!generique.muted) generiqueOK = true; });
 generique.addEventListener('error', () => {
   generiqueOK = false;
   if (++sourceGenerique < SOURCES_GENERIQUE.length) generique.src = SOURCES_GENERIQUE[sourceGenerique];
 });
 generique.src = SOURCES_GENERIQUE[0];
+const generiqueExiste = () => sourceGenerique < SOURCES_GENERIQUE.length;
+// iPhone : Safari ne charge rien tant qu'on n'a pas touché l'écran (« canplay » n'arrivait jamais, d'où la petite
+// boucle chiptune à la place de la chanson), et refuse de lancer un son hors d'un geste. Au tout premier toucher (ou
+// touche du clavier), on lance donc la chanson en silence puis on l'arrête : ensuite, elle peut partir quand on veut.
+function amorcerGenerique() {
+  if (generiqueAmorce || !generiqueExiste()) return;
+  generiqueAmorce = true;
+  generique.muted = true;
+  const p = generique.play();
+  if (p) p.then(() => { if (!generiqueVoulu) generique.pause(); generique.muted = false; })
+    .catch(() => { generique.muted = false; generiqueAmorce = false; });
+}
 let boucleChip = null;
 function musiqueTitre(jouer) {
+  generiqueVoulu = jouer;
   if (jouer) {
-    if (generiqueOK) { generique.currentTime = DEPART; generique.volume = 0.9; generique.play().catch(() => boucleChipDemarre()); }
-    else boucleChipDemarre();
+    if (!generiqueExiste()) { boucleChipDemarre(); return; }
+    const lancer = () => {
+      try { generique.currentTime = DEPART; } catch {}
+      generique.muted = false; generique.volume = 0.9;
+      generique.play().then(() => { generiqueOK = true; }).catch(() => boucleChipDemarre());
+    };
+    lancer();
+    // Pas encore chargée : le départ demandé (?a=…) se règle dès que la durée est connue
+    if (generique.readyState < 1 && DEPART) generique.addEventListener('loadedmetadata', () => { try { generique.currentTime = DEPART; } catch {} }, { once: true });
   } else {
     generique.pause();
     if (boucleChip) { clearInterval(boucleChip.id); boucleChip.gain.gain.setTargetAtTime(0, actx.currentTime, 0.1); boucleChip = null; }
@@ -377,7 +398,9 @@ const maintenant = () => performance.now() / 1000;
 // Deux appuis rapides sur la même direction : DASH.
 function directionPressee(dir) {
   const t = maintenant();
-  if (dernierAppui.dir === dir && t - dernierAppui.t < REGLAGES.DOUBLE_APPUI) { dashDemande = dir; dernierAppui = { dir: 0, t: -1 }; }
+  // Au doigt, deux touchers sont un peu plus lents qu'au clavier : un peu plus de marge
+  const delai = tactile ? Math.max(REGLAGES.DOUBLE_APPUI, 0.36) : REGLAGES.DOUBLE_APPUI;
+  if (dernierAppui.dir === dir && t - dernierAppui.t < delai) { dashDemande = dir; dernierAppui = { dir: 0, t: -1 }; }
   else dernierAppui = { dir, t };
 }
 addEventListener('keydown', (e) => {
@@ -395,6 +418,16 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { const n = TOUCHES[e.code]; if (n) clavier[n] = false; });
 addEventListener('blur', () => { for (const k in clavier) clavier[k] = false; if (etat === 'jeu') basculerPause(); });
 addEventListener('pointerdown', () => { audioInit(); fronts.nimporte = true; });
+// La chanson du générique s'amorce au premier geste (voir amorcerGenerique) : Safari sur iPhone veut un vrai
+// « toucher terminé » ou un clic, pas seulement un appui.
+for (const ev of ['touchend', 'pointerup', 'click', 'keydown']) addEventListener(ev, () => { audioInit(); amorcerGenerique(); }, { passive: true });
+// iPhone : deux touchers rapides (le DASH : deux fois sur une flèche) zoomaient la page au lieu de faire courir le
+// héros. Safari ignore « user-scalable=no » et pas toujours « touch-action » : on bloque nous-mêmes le double toucher
+// et le pincement (le jeu n'a rien à zoomer ni à faire défiler).
+let dernierToucher = 0;
+document.addEventListener('touchend', (e) => { if (e.timeStamp - dernierToucher < 450) e.preventDefault(); dernierToucher = e.timeStamp; }, { passive: false });
+document.addEventListener('touchstart', (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+for (const ev of ['gesturestart', 'gesturechange', 'dblclick']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
 
 const pad = document.getElementById('pad');
 const padDir = { x: 0, y: 0 };
@@ -2055,21 +2088,100 @@ function pigeon(px, py, s, f, salut) {
   if (salut) { R(1, -16, 3, 9, '#20202a'); R(2, -15, 1, 7, '#a0a0b8'); R(3, -15, 1, 2, '#a0a0b8'); }
   else R(-4, -7, 6, 2, '#5a5a70');
 }
-// Un démon énervé... qui doute devant le pouce. (px, py) : ses pieds.
-function demon(px, py, s, t) {
-  const tr = Math.round(Math.sin(t * 40));
-  const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(px + (x + tr) * s), Math.round(py + y * s), w * s, h * s); };
+// Le démon du clip. (px, py) : ses pieds. humeur : 'fier' (bras croisés, cornes dressées, yeux plissés, sourire en
+// coin, la queue qui ondule) ou 'peur' (il tremble, cornes qui tombent, yeux ronds, sourcils relevés, les dents qui
+// claquent, les bras levés, les genoux qui s'entrechoquent, le front qui bleuit). tremble : force du tremblement.
+function demon(px, py, s, t, humeur = 'peur', tremble = 1) {
+  const fier = humeur === 'fier';
+  const tr = Math.round(Math.sin(t * 47) * tremble), trY = tremble > 1.2 ? Math.round(Math.sin(t * 61) * 0.6) : 0;
+  const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(px + (x + tr) * s), Math.round(py + (y + trY) * s), w * s, h * s); };
   const O = (x, y, w, h, c) => { R(x - 1, y - 1, w + 2, h + 2, '#1a0404'); R(x, y, w, h, c); };
-  O(10, -16, 9, 2, '#901414'); O(18, -19, 3, 3, '#901414');
-  O(-5, -14, 4, 14, '#901414'); O(1, -14, 4, 14, '#901414');
-  O(-9, -36, 18, 23, '#c81818'); R(-9, -36, 3, 23, '#901414');
-  O(-14, -34, 5, 16, '#a01414'); O(9, -34, 5, 16, '#a01414');
-  O(-8, -50, 16, 14, '#d02020');
-  O(-10, -56, 3, 7, '#f0e0c0'); O(7, -56, 3, 7, '#f0e0c0');
-  R(-5, -45, 4, 3, '#ffe040'); R(2, -45, 4, 3, '#ffe040'); R(-5, -44, 2, 2, '#000'); R(2, -44, 2, 2, '#000');
-  R(-6, -47, 2, 1, '#3a0404'); R(-4, -48, 3, 1, '#3a0404'); R(2, -48, 3, 1, '#3a0404'); R(5, -47, 2, 1, '#3a0404');
-  R(-4, -40, 8, 2, '#3a0404'); R(-3, -40, 1, 1, '#fff'); R(2, -40, 1, 1, '#fff');
-  for (let i = 0; i < 3; i++) { const k = (t * 1.5 + i / 3) % 1; R(9 + i * 2, -50 + k * 14, 1, 2, '#60c8ff'); }
+  const peau = fier ? '#d02020' : '#c8342a', peauO = fier ? '#901414' : '#86221a', corps = fier ? '#c81818' : '#b42a22', noir = '#3a0404';
+  const souffle = fier ? Math.round(Math.max(0, Math.sin(t * 2.4))) : 0; // il bombe le torse
+  // La queue terminée en flèche : fière, elle ondule ; apeurée, elle se cache entre les jambes
+  if (fier) {
+    const q = Math.round(Math.sin(t * 3) * 2);
+    O(9, -16, 6, 2, peauO); O(14, -20 + q, 2, 5, peauO); O(13, -25 + q, 5, 4, peauO); R(14, -24 + q, 3, 2, '#e84040');
+  } else { O(-1, -10, 2, 8, peauO); O(-2, -3, 4, 3, peauO); }
+  // Les jambes et les sabots (les genoux s'entrechoquent quand il a peur)
+  const gx = fier ? 0 : Math.round(Math.sin(t * 34));
+  O(-5 + gx, -14, 4, 12, peauO); O(1 - gx, -14, 4, 12, peauO);
+  O(-6 + gx, -3, 5, 3, '#2a0a0a'); O(1 - gx, -3, 5, 3, '#2a0a0a');
+  // Le corps (torse bombé, ventre plus clair, abdos)
+  O(-9 - souffle, -36, 18 + souffle * 2, 23, corps); R(-9 - souffle, -36, 3, 23, peauO);
+  R(-4, -30, 8, 12, fier ? '#e03a2a' : '#c84636'); R(-4, -26, 8, 1, peauO); R(-4, -22, 8, 1, peauO); R(0, -30, 1, 12, peauO);
+  if (fier) {
+    // Les bras croisés sur la poitrine, les griffes qui dépassent
+    O(-14, -34, 5, 9, '#a01414'); O(9, -34, 5, 9, '#a01414');
+    O(-12, -29, 24, 4, peau); O(-11, -26, 22, 3, peauO);
+    R(-13, -28, 1, 1, '#f0e0c0'); R(12, -25, 1, 1, '#f0e0c0');
+  } else {
+    // Les bras levés, les mains près des joues
+    O(-15, -42, 4, 12, '#a01414'); O(11, -42, 4, 12, '#a01414');
+    O(-16, -47, 5, 5, peau); O(11, -47, 5, 5, peau);
+    R(-16, -48, 1, 1, '#f0e0c0'); R(-14, -48, 1, 1, '#f0e0c0'); R(12, -48, 1, 1, '#f0e0c0'); R(14, -48, 1, 1, '#f0e0c0');
+  }
+  // La tête
+  O(-8, -50, 16, 14, peau); R(-8, -50, 2, 14, peauO); R(-5, -37, 10, 1, peauO);
+  if (fier) {
+    // Cornes dressées, yeux plissés qui regardent le héros de haut, sourcils en V, sourire en coin et un croc
+    O(-10, -57, 3, 8, '#f0e0c0'); O(7, -57, 3, 8, '#f0e0c0'); R(-10, -57, 1, 8, '#c8b898'); R(7, -57, 1, 8, '#c8b898');
+    R(-6, -45, 5, 2, '#ffe040'); R(2, -45, 5, 2, '#ffe040'); R(-6, -45, 2, 2, '#000'); R(2, -45, 2, 2, '#000');
+    R(-7, -48, 2, 1, noir); R(-5, -47, 2, 1, noir); R(-3, -46, 2, 1, noir);
+    R(6, -48, 2, 1, noir); R(4, -47, 2, 1, noir); R(2, -46, 2, 1, noir);
+    R(-4, -40, 7, 1, noir); R(3, -41, 2, 1, noir); R(5, -42, 1, 1, noir); R(1, -39, 1, 2, '#ffffff');
+  } else {
+    // Le front bleuit de peur
+    R(-6, -50, 13, 1, '#7a4a9a'); R(-6, -49, 13, 1, '#9a5a8a');
+    // Cornes qui tombent sur les côtés
+    O(-13, -51, 5, 3, '#f0e0c0'); O(8, -51, 5, 3, '#f0e0c0'); R(-14, -49, 2, 2, '#f0e0c0'); R(12, -49, 2, 2, '#f0e0c0');
+    // Yeux ronds, toutes petites pupilles qui tremblent, sourcils relevés
+    O(-7, -47, 5, 5, '#ffffff'); O(2, -47, 5, 5, '#ffffff');
+    const pp = Math.round(Math.sin(t * 23));
+    R(-5 + pp, -45, 1, 1, '#000'); R(4 + pp, -45, 1, 1, '#000');
+    R(-7, -48, 2, 1, noir); R(-5, -49, 2, 1, noir); R(5, -48, 2, 1, noir); R(3, -49, 2, 1, noir);
+    // La bouche ouverte en zigzag, les dents qui claquent
+    const claque = Math.floor(t * 18) % 2;
+    R(-5, -41, 10, 3 - claque, noir);
+    for (const x of [-4, -2, 0, 2]) R(x, -41, 1, 1, '#ffffff');
+    for (const x of [-3, -1, 1, 3]) R(x, -39 - claque, 1, 1, '#ffffff');
+  }
+}
+// Une goutte de sueur (grosse, bleu clair, avec son reflet). (x, y) : le bas de la goutte.
+function goutteSueur(x, y, s) {
+  const R = (px, py, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x + px * s), Math.round(y + py * s), w * s, h * s); };
+  R(-1, -6, 2, 1, '#1a3a5a'); R(-2, -5, 4, 1, '#1a3a5a'); R(-3, -4, 6, 4, '#1a3a5a'); R(-2, 0, 4, 1, '#1a3a5a');
+  R(-1, -5, 2, 1, '#9ae0ff'); R(-2, -4, 4, 4, '#60c8ff'); R(-1, -3, 1, 2, '#ffffff');
+}
+// Des flammes en langues, en pixel art : six couches, de la plus sombre (la plus haute) au cœur presque blanc, qui
+// ondulent et vacillent, avec la lueur de la chaleur au-dessus et des braises qui montent. (x0, x1) : leur largeur,
+// base : le bas, haut : la hauteur des plus hautes langues, force : 0 à 1 (elles faiblissent quand le démon a peur).
+function flammes(x0, x1, base, haut, t, force = 1, graine = 0, lueur = true) {
+  const h0 = haut * force;
+  // La lueur de la chaleur, en bandes
+  if (lueur) [[1.9, 0.08], [1.5, 0.12], [1.15, 0.16]].forEach(([k, a]) => { g.fillStyle = `rgba(255,110,20,${a * force})`; g.fillRect(x0, Math.round(base - h0 * k), x1 - x0, Math.round(h0 * k)); });
+  const couches = [[1, '#6a0a04'], [0.84, '#c01a08'], [0.68, '#ea4a10'], [0.5, '#ff8e12'], [0.32, '#ffcc3a'], [0.14, '#fff4b0']];
+  for (let x = x0; x < x1; x += 2) {
+    // Les langues : des pointes (1 - |sin|) qui se déplacent et se tordent, et un vacillement rapide par colonne
+    const a = x * 0.09 + graine + Math.sin(x * 0.031 + t * 1.3) * 1.4 - t * 2.6;
+    const langue = 0.3 + 0.7 * (1 - Math.abs(Math.sin(a))) ** 1.6;
+    const vacille = 0.8 + 0.2 * Math.sin(t * 17 + x * 1.7) * Math.sin(t * 9.3 + x * 0.37);
+    const h = h0 * langue * vacille;
+    for (const [k, c] of couches) {
+      const hh = Math.round(h * k + (k < 1 ? h0 * 0.06 : 0));
+      if (hh > 0) { g.fillStyle = c; g.fillRect(x, base - hh, 2, hh); }
+    }
+  }
+  // Les braises qui montent en dansant
+  const n = Math.round(22 * force);
+  for (let i = 0; i < n; i++) {
+    const c = (t * (0.5 + hasard(i + graine) * 0.5) + hasard(i + 3)) % 1;
+    const x = x0 + hasard(i + 11 + graine) * (x1 - x0) + Math.sin(t * 3 + i) * 6;
+    const y = base - h0 * 0.4 - c * h0 * 2.4;
+    g.globalAlpha = 1 - c; g.fillStyle = i % 3 ? '#ffb020' : '#fff0a0';
+    g.fillRect(Math.round(x), Math.round(y), i % 4 ? 1 : 2, i % 4 ? 1 : 2);
+  }
+  g.globalAlpha = 1;
 }
 // Le vieux sensei extrême qui lui a transmis le geste sacré : crâne chauve, bandeau rouge, longue barbe blanche,
 // le pouce levé. (px, py) : ses pieds.
@@ -2258,14 +2370,84 @@ const SCENES = {
     grosPouce(160, 128 + rebond * 140, 4, T);
     for (let i = 0; i < 10; i++) { g.fillStyle = i % 2 ? '#c08848' : '#e8b878'; g.fillRect(Math.round(110 + hasard(i) * 100), Math.round(30 + ((T * 50 + hasard(i + 4) * 200) % 190)), 2, 2); }
   },
-  // « ... peut faire douter même un démon énervé »
+  // « On raconte qu'un… peut faire douter même un démon énervé » : le démon, sûr de lui, ricane dans ses flammes ;
+  // Choco Pouce arrive en dash et tend le pouce ; zoom sur le démon : il tremble, change de tête, sue à grosses gouttes,
+  // et ses flammes faiblissent.
   demon(ts, T) {
-    g.fillStyle = '#2a0606'; g.fillRect(0, 0, L, H);
-    for (let i = 0; i < 40; i++) { const h = 10 + Math.round((Math.sin(T * 9 + i * 1.7) + 1) * 9); g.fillStyle = i % 3 ? '#e83810' : '#ffb020'; g.fillRect(i * 8, H - h, 6, h); }
-    disque(g, 70, 112, 40, '#5a3010'); disque(g, 70, 112, 34, '#7a4418');
-    grosPouce(70, 124, 2, T);
-    demon(230, 200, 3, T);
-    if (Math.floor(T * 3) % 2 === 0) texte('?!', 262, 30, '#ffe040', 3, '#3a0404', 'c');
+    const POUCE = 3.2, PEUR = 3.9, ZOOM = 4.4;
+    // La caverne : rouge sombre en bandes, des roches en pointes, une lueur qui pulse
+    ['#160202', '#220404', '#300806', '#3e0c08', '#4c1208'].forEach((c, i) => { g.fillStyle = c; g.fillRect(0, i * 45, L, 45); });
+    if (ts < ZOOM) {
+      g.fillStyle = '#100101';
+      for (let x = 0; x < L; x += 2) { const h = 40 + Math.abs(Math.sin(x * 0.045)) * 46 + hasard(Math.floor(x / 10)) * 22; g.fillRect(x, Math.round(200 - h), 2, Math.round(h)); }
+      // Les flammes derrière le démon (hautes), puis le démon, puis les flammes de devant (plus claires, à ses pieds)
+      flammes(0, L, 212, 58, T, 1);
+      const peur = ts >= PEUR;
+      demon(234, 198, 3, T, peur ? 'peur' : 'fier', peur ? 0.6 : 0);
+      flammes(138, L, 224, 24, T * 1.25 + 4, 1, 7, false);
+      // Le rocher où se tient le héros
+      g.fillStyle = '#1a0a08'; g.fillRect(0, 200, 140, 24); g.fillStyle = '#2e1410'; g.fillRect(0, 200, 140, 3);
+      for (let x = 0; x < 140; x += 14) { g.fillStyle = '#120604'; g.fillRect(x + 5, 206 + (x % 3) * 4, 6, 2); }
+      // Le démon ricane
+      if (ts > 0.5 && ts < POUCE - 0.2) texte(Math.floor(ts * 4) % 2 ? 'HÉ HÉ HÉ !' : 'HO HO HO !', 170, 44, '#ffe040', 1, '#3a0404', 'c');
+      // Choco Pouce arrive en dash, s'arrête, puis tend le pouce
+      const arrive = Math.min(1, Math.max(0, (ts - 0.9) / 0.5));
+      const hx = Math.round(-50 + arrive * 130);
+      if (ts > 0.9) {
+        const pose = arrive < 1 ? 'dash' : ts >= POUCE ? 'coup' : 'debout';
+        if (arrive < 1) { g.fillStyle = '#ffffff'; for (const dy of [-60, -40, -20]) g.fillRect(hx - 60, 200 + dy, 36, 1); }
+        herosGrand(hx, 200, 2, 1, { pose, choco: true, marche: 0, vh: 1 }, T);
+      }
+      // Le pouce brille : rayons dorés et étincelle, « TING ! »
+      if (ts >= POUCE) {
+        const px = hx + 40, py = 98, p = Math.min(1, (ts - POUCE) / 0.3);
+        g.strokeStyle = '#ffe890'; g.lineWidth = 1; g.globalAlpha = 0.8 * p;
+        for (let n = 0; n < 10; n++) { const a = (n / 10) * Math.PI * 2 + T * 1.5, r = 10 + p * 28 + (n % 2) * 8; g.beginPath(); g.moveTo(px + Math.cos(a) * 8, py + Math.sin(a) * 8); g.lineTo(px + Math.cos(a) * r, py + Math.sin(a) * r); g.stroke(); }
+        g.globalAlpha = 1;
+        etincelle(px, py, Math.floor(T * 12) % 2 ? 5 : 3, '#ffffff');
+        if (ts < PEUR + 0.3) texte('TING !', px, 56, OR, 2, '#3a0a00', 'c');
+      }
+      // Le démon comprend : « ?! »
+      if (ts >= PEUR && Math.floor(T * 8) % 2 === 0) texte('?!', 262, 18, '#ffe040', 3, '#3a0404', 'c');
+      if (ts >= PEUR) goutteSueur(234 + 10 * 3, 198 - 46 * 3, 2);
+      return;
+    }
+    // ZOOM : un zoom en trois crans (3, 4, 5, 6 fois) sur le démon, avec des traits de vitesse
+    const tz = ts - ZOOM, cran = Math.min(3, Math.floor(tz / 0.09)), k = cran / 3;
+    const s = 3 + cran, px = Math.round(234 + (168 - 234) * k), py = Math.round(198 + (352 - 198) * k);
+    const cx = px, cy = py - 44 * s;
+    // Les traits de concentration, façon manga, autour de sa tête
+    g.fillStyle = '#5a1008';
+    for (let n = 0; n < 28; n++) {
+      const a = (n / 28) * Math.PI * 2 + hasard(n + Math.floor(T * 10)) * 0.08, r0 = 70 + hasard(n) * 20;
+      for (let r = r0; r < 260; r += 3) g.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r), 2, 2);
+    }
+    // Ses flammes faiblissent à mesure que la peur le gagne
+    const force = Math.max(0.5, 1 - tz * 0.08);
+    flammes(0, L, H, 96, T, force, 3);
+    const tremble = 0.8 + Math.min(1.2, tz * 0.35);
+    demon(px, py, s, T, 'peur', tremble);
+    flammes(0, L, H + 2, 40, T * 1.25 + 4, force, 9, false);
+    // Les gouttes de sueur qui perlent sur son front et tombent, de plus en plus nombreuses
+    const perles = [[-7, -49, -1], [7, -49, 1], [-9, -45, -1], [9, -44, 1], [-6, -50, -1], [6, -50, 1], [-9, -41, -1], [9, -40, 1]];
+    const n = Math.min(perles.length, 2 + Math.floor(tz * 1.6));
+    for (let i = 0; i < n; i++) {
+      const [fx, fy, sens] = perles[i], c = (tz * 0.85 + hasard(i + 2)) % 1;
+      const x = px + fx * s + sens * c * 26, y = py + fy * s + 6 + c * c * 110;
+      goutteSueur(x, y, s >= 6 ? 2 : 1);
+    }
+    // La grosse goutte de la tempe, qui gonfle
+    if (cran === 3) goutteSueur(px + 10 * s, py - 46 * s + Math.min(12, tz * 6), 3);
+    // Le pouce de Choco Pouce, au bord de l'écran, qui brille toujours
+    if (cran === 3) {
+      disque(g, 22, 104, 30, 'rgba(255,220,120,0.25)');
+      grosPouce(22, 112, 2, T);
+      etincelle(14, 62, Math.floor(T * 12) % 2 ? 4 : 2, '#ffffff');
+    }
+    // Le flash du zoom
+    if (tz < 0.36) { g.fillStyle = `rgba(255,255,255,${0.5 * (1 - tz / 0.36)})`; g.fillRect(0, 0, L, H); }
+    if (tz > 1.0 && tz < 3.4) texte('GLUPS !', 250, 26, '#a0e8ff', 2, '#0a2a4a', 'c');
+    if (tz >= 3.4 && Math.floor(T * 6) % 2 === 0) texte('?!', 258, 22, '#ffe040', 3, '#3a0404', 'c');
   },
   // « Il court pas, il dash »
   dash(ts, T) {
