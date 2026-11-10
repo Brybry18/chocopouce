@@ -2304,6 +2304,80 @@ addEventListener('keydown', (e) => {
 // ——— Outils de dessin du clip ———
 const herosVol = toile(110, 52);
 const tmpHeros = toile(120, 100);
+// Choco Pouce vu de face (le clip : « cheveux au vent… ça dépend »). (ox, oy) : ses pieds.
+//   e.pose : 'face' (le pouce levé devant lui) ou 'tantpis' (il hausse les épaules, bras écartés, paumes en l'air)
+//   e.chauve : de combien le casque s'est soulevé (on voit son crâne chauve qui brille) ; e.vent : les cheveux au vent
+function dessinerHerosFace(x, ox, oy, e, t) {
+  ox = Math.round(ox); oy = Math.round(oy);
+  const R = (px, py, w, h, c) => { x.fillStyle = c; x.fillRect(ox + px, oy + py, w, h); };
+  const O = (px, py, w, h, c) => { R(px - 1, py - 1, w + 2, h + 2, PAL.contour); R(px, py, w, h, c); };
+  const tantpis = e.pose === 'tantpis', hy = tantpis ? -1 : 0; // il rentre un peu la tête dans les épaules
+  const vent = e.vent ? Math.round(Math.sin(t * 9) * 2) : 0;
+  // La cape, derrière lui, qui flotte des deux côtés
+  const ondule = Math.round(Math.sin(t * 6) * 1.5);
+  O(-13 - ondule, -46, 26 + ondule * 2, 40, PAL.cape);
+  R(-13 - ondule, -46, 4, 40, PAL.capeOmbre); R(9 + ondule, -46, 4, 40, PAL.capeOmbre);
+  for (let i = 0; i < 26 + ondule * 2; i += 4) R(-13 - ondule + i, -7 + ((i / 4) % 2), 2, 1, PAL.capeOmbre);
+  // Les jambes et les chaussures
+  O(-6, -24, 5, 20, PAL.jambe); O(1, -24, 5, 20, PAL.jambeOmbre);
+  O(-7, -4, 6, 4, PAL.chaussure); O(1, -4, 6, 4, PAL.chaussure);
+  // Le torse, la ceinture, « CP » sur la poitrine
+  O(-9, -46 + hy, 18, 22, PAL.costume);
+  R(-9, -46 + hy, 2, 22, PAL.costumeOmbre); R(7, -46 + hy, 2, 22, PAL.costumeClair);
+  R(-9, -28 + hy, 18, 3, PAL.ceinture); R(-1, -28 + hy, 3, 3, PAL.jaune);
+  [['C', -6], ['P', 1]].forEach(([l, dx]) => LETTRES_CP[l].forEach((ligne, j) => { for (let k = 0; k < 5; k++) if (ligne & (16 >> k)) R(dx + k, -42 + hy + j, 1, 1, PAL.jaune); }));
+  // Les bras
+  if (tantpis) {
+    // « Tant pis » : les bras écartés sur les côtés, les avant-bras levés, les paumes vers le ciel
+    O(-19, -45 + hy, 10, 4, PAL.costume); O(9, -45 + hy, 10, 4, PAL.costume);
+    O(-22, -52 + hy, 4, 9, PAL.costume); O(18, -52 + hy, 4, 9, PAL.costume);
+    O(-25, -55 + hy, 7, 3, PAL.peau); O(18, -55 + hy, 7, 3, PAL.peau);
+    R(-25, -56 + hy, 1, 1, PAL.peau); R(-23, -56 + hy, 1, 1, PAL.peau); R(22, -56 + hy, 1, 1, PAL.peau); R(24, -56 + hy, 1, 1, PAL.peau);
+  } else {
+    // Le bras gauche le long du corps, le droit replié devant : le pouce levé
+    O(-13, -45, 4, 16, PAL.costume); O(-13, -29, 4, 4, PAL.peau);
+    O(9, -45, 4, 10, PAL.costume); O(5, -37, 8, 4, PAL.costume);
+    O(3, -40, 5, 6, PAL.peau); O(4, -46, 3, 6, PAL.peau); R(5, -45, 1, 2, PAL.ongle);
+    if (e.choco) { R(4, -47, 3, 2, PAL.choco); R(4, -47, 1, 1, PAL.chocoClair); }
+  }
+  // Le cou et la tête
+  R(-2, -49 + hy, 5, 3, PAL.peauOmbre);
+  O(-6, -62 + hy, 13, 13, PAL.peau);
+  R(-6, -62 + hy, 2, 13, PAL.peauOmbre);
+  // Les yeux, la bouche (un sourire ; « tant pis » : sourcils levés, bouche de travers, yeux mi-clos)
+  if (tantpis) {
+    R(-4, -56 + hy, 2, 1, PAL.oeil); R(3, -56 + hy, 2, 1, PAL.oeil);
+    R(-5, -59 + hy, 3, 1, PAL.cheveuxOmbre); R(3, -59 + hy, 3, 1, PAL.cheveuxOmbre);
+    R(-2, -52 + hy, 2, 1, PAL.bouche); R(0, -53 + hy, 2, 1, PAL.bouche); R(2, -52 + hy, 1, 1, PAL.bouche);
+  } else {
+    R(-4, -57 + hy, 2, 3, PAL.oeil); R(3, -57 + hy, 2, 3, PAL.oeil); R(-4, -57 + hy, 1, 1, '#fff'); R(3, -57 + hy, 1, 1, '#fff');
+    R(-2, -52 + hy, 5, 1, PAL.bouche); R(-3, -53 + hy, 1, 1, PAL.bouche); R(3, -53 + hy, 1, 1, PAL.bouche);
+  }
+  // Les cheveux mi-longs de chaque côté (au vent : les mèches flottent)
+  O(-9 + Math.min(0, vent), -61 + hy, 3, 14, PAL.cheveux); O(7 + Math.max(0, vent), -61 + hy, 3, 14, PAL.cheveux);
+  R(-9 + Math.min(0, vent), -55 + hy, 1, 8, PAL.cheveuxOmbre); R(9 + Math.max(0, vent), -55 + hy, 1, 8, PAL.cheveuxOmbre);
+  if (e.vent) { R(-12 + vent, -50 + hy, 3, 1, PAL.cheveux); R(10 - vent, -50 + hy, 3, 1, PAL.cheveux); }
+  // Le dessus de la tête : la frange… ou le crâne chauve qui brille quand le casque se soulève
+  const lev = e.chauve ? Math.round(e.chauve) : 0;
+  if (lev) {
+    R(-6, -66 + hy, 13, 1, PAL.contour); R(-7, -65 + hy, 1, 3, PAL.contour); R(7, -65 + hy, 1, 3, PAL.contour);
+    R(-6, -65 + hy, 13, 3, PAL.peau); R(-2, -65 + hy, 3, 1, '#ffffff'); R(-3, -64 + hy, 1, 1, '#fff8e0');
+  } else {
+    O(-6, -63 + hy, 13, 3, PAL.cheveux); R(-4, -63 + hy, 4, 1, PAL.cheveuxClair); R(-1, -61 + hy, 4, 2, PAL.cheveux);
+  }
+  // Le petit casque, de face (la bande jaune au milieu)
+  const cy = hy - lev;
+  O(-6, -68 + cy, 13, 5, PAL.casque);
+  R(-4, -68 + cy, 3, 1, '#ffffff'); R(-1, -68 + cy, 3, 5, PAL.jaune);
+  R(-7, -64 + cy, 15, 1, PAL.casqueOmbre);
+}
+// Choco Pouce de face, agrandi ; (x, y) : ses pieds à l'écran.
+function herosFaceGrand(x, y, s, e, t) {
+  const c = tmpHeros.getContext('2d');
+  c.clearRect(0, 0, tmpHeros.width, tmpHeros.height);
+  dessinerHerosFace(c, 60, 92, e, t);
+  g.drawImage(tmpHeros, Math.round(x - 60 * s), Math.round(y - 92 * s), tmpHeros.width * s, tmpHeros.height * s);
+}
 // Le héros debout, agrandi (s = 2 ou 3) ; (x, y) : ses pieds à l'écran.
 function herosGrand(x, y, s, f, e, t) {
   const c = tmpHeros.getContext('2d');
@@ -2658,7 +2732,10 @@ const SCENES = {
     g.globalAlpha = 0.6; g.fillStyle = '#fff';
     for (let i = 0; i < 12; i++) g.fillRect(Math.round(L - ((T * 220 + hasard(i) * 600) % (L + 60))), Math.round(20 + hasard(i + 3) * 180), 10 + Math.round(hasard(i + 5) * 16), 1);
     g.globalAlpha = 1;
-    herosGrand(150, 300, 3, 1, { pose: 'debout', choco: true }, T * 1.8);
+    // Il est de profil, les cheveux au vent, puis se tourne vers nous (de face)
+    if (ts < 0.6) herosGrand(150, 300, 3, 1, { pose: 'debout', choco: true }, T * 1.8);
+    else if (ts < 0.85 && Math.floor((ts - 0.6) / 0.08) % 2 === 0) herosGrand(150, 300, 3, -1, { pose: 'debout', choco: true }, T * 1.8);
+    else herosFaceGrand(150, 300, 3, { pose: 'face', choco: true, vent: true }, T * 1.8);
   },
   // « Même s'il n'en a pas beaucoup, ça dépend » : un coup de vent, le casque s'envole... calvitie !
   calvitie(ts, T) {
@@ -2666,12 +2743,15 @@ const SCENES = {
     g.globalAlpha = 0.7; g.fillStyle = '#fff';
     for (let i = 0; i < 18; i++) g.fillRect(Math.round(L - ((T * 320 + hasard(i) * 600) % (L + 60))), Math.round(20 + hasard(i + 3) * 180), 14 + Math.round(hasard(i + 5) * 20), 1);
     g.globalAlpha = 1;
+    // De face : le casque se soulève, on voit son crâne chauve qui brille… et il hausse les épaules, bras écartés,
+    // paumes en l'air : tant pis !
     const lev = Math.max(0, Math.sin(ts * 2.6)) * 16;
-    herosGrand(150, 300, 3, 1, { pose: 'debout', choco: true, chauve: lev > 1 ? lev : 0 }, T * 2.4);
+    herosFaceGrand(150, 300, 3, { pose: lev > 3 ? 'tantpis' : 'face', choco: true, chauve: lev > 1 ? lev : 0, vent: true }, T * 2.4);
     if (lev > 8) {
-      etincelle(150 + 0 * 3, 300 - 65 * 3, Math.floor(T * 12) % 2 ? 4 : 2);
-      texte('PING!', 205, 70, '#ffffff', 2, '#3a1458', 'c');
+      etincelle(150, 300 - 66 * 3, Math.floor(T * 12) % 2 ? 4 : 2);
+      texte('PING!', 230, 70, '#ffffff', 2, '#3a1458', 'c');
     }
+    if (lev > 3) texte('TANT PIS !', 150, 10, '#ffe040', 2, '#3a1458', 'c');
   },
   // « Un geste sacré hérité d'un vieux sensei extrême »
   sensei(ts, T) {
