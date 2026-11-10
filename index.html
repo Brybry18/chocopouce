@@ -223,6 +223,9 @@ const SONS = {
   balayage() { bip('square', 180, 1400, 1.1, 0.05); bruit(1.1, 0.12, 300, 5000); },
   saut() { bip('square', 220, 900, 0.16, 0.25); bip('square', 440, 1800, 0.1, 0.08, 0.03); bruit(0.12, 0.15, 4000, 9000); },
   dash() { bruit(0.22, 0.45, 4500, 500); bip('sawtooth', 600, 150, 0.15, 0.08); },
+  // Une tablette ramassée : croc ! puis une petite gamme ; la grande tablette dorée : fanfare
+  tablette() { bruit(0.05, 0.3, 2000, 6000); [784, 988, 1175].forEach((f, i) => bip('square', f, f, 0.07, 0.1, 0.04 + i * 0.05)); },
+  grandeTablette() { bruit(0.06, 0.3, 2000, 6000); [523, 659, 784, 1046, 1319].forEach((f, i) => bip('square', f, f, 0.12, 0.12, 0.05 + i * 0.07)); bip('triangle', 131, 131, 0.6, 0.3, 0.05); },
   boum() { bip('sine', 150, 32, 0.38, 0.9); bruit(0.28, 0.55, 900, 80); },
   coup() { bip('square', 760, 190, 0.08, 0.2); bruit(0.07, 0.25, 2500, 700); },
   ting2() { bip('triangle', 1900, 1880, 0.22, 0.3); bip('triangle', 2850, 2830, 0.18, 0.12); },
@@ -335,9 +338,15 @@ const PISTES = {
   // Monde 2 : la forêt (ré mineur, aventure, flûte)
   foret: { T: 0.125, timbre: 'triangle', racines: [38, 36, 34, 33], basse: [0, 7, 12, 7, 0, 7, 12, 7], kick: [0, 8], caisse: [4, 12],
     melo: '62 . 65 . 69 . . . 67 . 65 . 64 . 62 . 60 . 64 . 67 . . . 65 . 64 . 62 . . . 62 . 65 . 69 . 72 . 71 . 69 . 67 . 69 . 65 . . . 64 . . . 62 . . . . . . .' },
-  // Monde 3 : le repaire (mi phrygien, menaçant)
+  // Monde 5 : le repaire (mi phrygien, menaçant)
   repaire: { T: 0.11, timbre: 'square', racines: [40, 40, 36, 41], basse: [0, 0, 12, 0, 0, 1, 0, 12], kick: [0, 3, 8, 11], caisse: [4, 12],
     melo: '64 . . 65 . . 64 . 67 . . 65 . . 64 . 64 . . 65 . . 64 . 71 . 70 . 67 . . . 76 . 74 . 72 . 71 . 72 . 71 . 69 . 67 . 65 . . . 64 . . . 63 . 64 . . . . .' },
+  // Monde 3 : la chocolaterie (do majeur, bondissant, façon usine en folie)
+  fabrique: { T: 0.105, timbre: 'square', racines: [48, 45, 41, 43], basse: [0, 12, 7, 12, 0, 12, 7, 12], kick: [0, 8], caisse: [4, 12],
+    melo: '72 . 76 79 . 76 72 . 74 . 77 81 . 77 74 . 72 . 76 79 84 . 79 76 77 . 76 . 74 . . . 76 . 79 . 84 . 83 . 81 . 79 . 77 . 76 . 74 76 77 79 . 76 . 72 . 74 . 72 . . .' },
+  // Monde 4 : les toits, la nuit (si mineur, course poursuite)
+  toits: { T: 0.1, timbre: 'square', racines: [47, 43, 45, 42], basse: [0, 0, 12, 0, 7, 0, 12, 0], kick: [0, 6, 8, 14], caisse: [4, 12],
+    melo: '71 . 74 . 78 . 76 74 73 . 71 . 69 . 71 . 74 . 78 . 81 . 79 78 76 . 74 . 73 . . . 71 . 74 . 78 . 83 . 81 . 79 . 78 . 76 . 74 . 76 . 78 . 74 . 71 . . . . .' },
   // Le Général Constipax (rapide, intense)
   boss: { T: 0.095, timbre: 'square', racines: [45, 45, 41, 40], basse: [0, 12, 0, 12, 0, 12, 0, 12], kick: [0, 4, 8, 12], caisse: [4, 12],
     melo: '69 72 76 72 69 72 76 79 77 76 74 72 74 76 72 71 69 72 76 72 69 72 76 81 79 77 76 74 76 . 72 . 77 . 76 . 74 . 72 . 74 . 76 . 77 . 79 . 81 . 79 . 77 . 76 . 75 . 76 . . . . .' },
@@ -378,11 +387,11 @@ function arreterMusique() {
 }
 // La musique qui va avec l'écran : celle du monde en jeu, celle du Général pendant le combat, rien ailleurs
 // (l'écran titre, le menu et la victoire ont la chanson).
-const PISTE_MONDE = { 1: 'ville', 2: 'foret', 3: 'repaire' };
+const PISTE_MONDE = { ville: 'ville', foret: 'foret', fabrique: 'fabrique', toits: 'toits', repaire: 'repaire' };
 function majMusique() {
   if (!actx) return;
   let voulue = null;
-  if (['jeu', 'pause', 'pouvoirAnim'].includes(etat)) voulue = boss ? (['ko', 'envole'].includes(boss.etat) ? null : 'boss') : PISTE_MONDE[monde];
+  if (['jeu', 'pause', 'pouvoirAnim'].includes(etat)) voulue = boss ? (['ko', 'envole'].includes(boss.etat) ? null : 'boss') : PISTE_MONDE[MONDES[monde].theme];
   if ((musique?.nom ?? null) !== voulue) { arreterMusique(); if (voulue) jouerMusique(voulue); }
   if (musique) musique.gain.gain.value = etat === 'pause' ? 0.1 : etat === 'pouvoirAnim' ? 0.15 : 0.42;
 }
@@ -678,6 +687,13 @@ const PALETTES_V = {
   // Les sbires camouflés de la forêt : tenue kaki, capuche couverte de feuilles, visage peint
   sbire: { ...PAL_V, contour: '#0e140a', peau: '#c08a60', peauOmbre: '#906040', barbe: '#2a3a1a', sweat: '#4a6a2a', sweatOmbre: '#2e4a1a', jean: '#3a4a2a', jeanOmbre: '#28361c', basket: '#3a2a1a', bande: '#2a1a0a', camo: true, feuille: '#6a9a3a' },
   sbireVif: { ...PAL_V, contour: '#0e140a', peau: '#b07a50', peauOmbre: '#805030', barbe: '#3a2a1a', sweat: '#6a5a2a', sweatOmbre: '#4a3e1a', jean: '#4a3e22', jeanOmbre: '#342a16', basket: '#2a1a0a', bande: '#1a1008', camo: true, feuille: '#a8902a' },
+  // Les ouvriers de la chocolaterie : bleu de travail, casque jaune ; le contremaître en blanc, casque rouge
+  ouvrier: { ...PAL_V, sweat: '#2a5aa8', sweatOmbre: '#1c3e7a', jean: '#2a4a8a', jeanOmbre: '#1c3466', basket: '#3a2a1a', bande: '#3a2a1a', casquette: '#e8c020', casquetteClair: '#ffe060', casquetteOmbre: '#a88010', soldat: true },
+  ouvrierVif: { ...PAL_V, peau: '#b87050', peauOmbre: '#8a4a34', barbe: '#3a2418', sweat: '#e87020', sweatOmbre: '#a84a10', jean: '#2a4a8a', jeanOmbre: '#1c3466', basket: '#3a2a1a', bande: '#3a2a1a', casquette: '#e8c020', casquetteClair: '#ffe060', casquetteOmbre: '#a88010', soldat: true },
+  contremaitre: { ...PAL_V, peau: '#e0a080', peauOmbre: '#b07050', barbe: '#5a3a28', sweat: '#e8e8f0', sweatOmbre: '#b8b8c8', jean: '#3a3a44', jeanOmbre: '#2a2a32', basket: '#141414', bande: '#141414', casquette: '#d02828', casquetteClair: '#f05050', casquetteOmbre: '#901818', soldat: true },
+  // Les monte-en-l'air des toits : tout en noir, bandeau rouge
+  monteEnLair: { ...PAL_V, contour: '#05050a', sweat: '#1e1e2a', sweatOmbre: '#12121a', jean: '#1a1a24', jeanOmbre: '#101018', basket: '#2a2a36', bande: '#d02828', casquette: '#1e1e2a', casquetteClair: '#3a3a4a', casquetteOmbre: '#12121a' },
+  monteEnLairVif: { ...PAL_V, contour: '#05050a', peau: '#b87050', peauOmbre: '#8a4a34', barbe: '#3a2418', sweat: '#2a2a3e', sweatOmbre: '#1a1a2a', jean: '#1a1a24', jeanOmbre: '#101018', basket: '#2a2a36', bande: '#e8c020', casquette: '#2a2a3e', casquetteClair: '#4a4a62', casquetteOmbre: '#1a1a2a' },
   // Les soldats du Général : uniforme vert, casque rond, bottes noires
   soldat: { ...PAL_V, sweat: '#3a5a2a', sweatOmbre: '#2a4220', jean: '#2e4a22', jeanOmbre: '#203616', basket: '#141414', bande: '#141414', casquette: '#2e4a22', casquetteClair: '#4a6a32', casquetteOmbre: '#1a2a12', soldat: true },
   soldatVif: { ...PAL_V, peau: '#b87050', peauOmbre: '#8a4a34', barbe: '#3a2418', sweat: '#3e4a5a', sweatOmbre: '#2a3240', jean: '#2e3644', jeanOmbre: '#1e2430', basket: '#141414', bande: '#141414', casquette: '#3e4a5a', casquetteClair: '#5a6a7a', casquetteOmbre: '#1e2430', soldat: true },
@@ -892,10 +908,14 @@ const proche = toile(512, H, (x) => {
     x.fillStyle = '#fff4b0'; x.fillRect(lx - 2, 58, 7, 2);
   }
 });
-// Le décor du monde en cours (la ville, la forêt ou le repaire)
+// Le décor du monde en cours (la ville, la forêt, la chocolaterie, les toits ou le repaire)
+const themeMonde = () => MONDES[monde].theme;
 function dessinerDecor(cam, t) {
-  if (monde === 2) dessinerForet(cam, t);
-  else if (monde === 3) dessinerRepaire(cam, t);
+  const th = themeMonde();
+  if (th === 'foret') dessinerForet(cam, t);
+  else if (th === 'fabrique') dessinerFabrique(cam, t);
+  else if (th === 'toits') dessinerToits(cam, t);
+  else if (th === 'repaire') dessinerRepaire(cam, t);
   else dessinerVille(cam, t);
 }
 const tuilesDecor = (c, cam, v, w, dy = 0) => { const dx = -Math.round(cam * v) % w; for (let k = dx; k < L; k += w) g.drawImage(c, k, dy); };
@@ -973,7 +993,7 @@ function dessinerForet(cam, t) {
   }
 }
 
-// ——— Monde 3 : le repaire du Général Constipax (usines et cheminées, forteresse de métal, alarmes, fumée verdâtre) ———
+// ——— Monde 5 : le repaire du Général Constipax (usines et cheminées, forteresse de métal, alarmes, fumée verdâtre) ———
 const cielRepaire = toile(L, H, (x) => {
   const bandes = ['#060806', '#0a0e0a', '#0e140e', '#121c12', '#16261a', '#1c321e', '#22401f', '#2a4e22'];
   const hb = 16;
@@ -1056,6 +1076,161 @@ function dessinerRepaire(cam, t) {
   g.globalAlpha = Math.max(0, Math.sin(t * 3)) * 0.06; g.fillStyle = '#ff0000'; g.fillRect(0, 0, L, H); g.globalAlpha = 1;
 }
 
+// ——— Monde 3 : la chocolaterie (cuves, tuyaux, tapis roulant de tablettes, cascade de chocolat, carrelage) ———
+const cielFabrique = toile(L, H, (x) => {
+  ['#140a06', '#1c0e08', '#26140a', '#30190c', '#3a1f0e', '#442510'].forEach((c, i) => { x.fillStyle = c; x.fillRect(0, i * 24, L, 24); });
+  x.fillStyle = '#442510'; x.fillRect(0, 144, L, 80);
+  // Les poutres du plafond
+  x.fillStyle = '#0c0604'; for (let k = 0; k < L; k += 40) { x.fillRect(k, 0, 6, 30); x.fillRect(k - 14, 26, 34, 4); }
+});
+const CUVES = [[70, 52], [250, 46], [430, 56], [580, 48]]; // x et haut des grandes cuves, dans le calque du fond
+const loinFabrique = toile(640, H, (x) => {
+  const r = alea(41);
+  for (const [cx, top] of CUVES) {
+    x.fillStyle = '#1a0e08'; x.fillRect(cx - 34, top, 68, 140 - top);
+    x.fillStyle = '#5a3a26'; x.fillRect(cx - 32, top + 2, 64, 136 - top);
+    x.fillStyle = '#7a5236'; x.fillRect(cx - 32, top + 2, 10, 136 - top);
+    x.fillStyle = '#3a2416'; x.fillRect(cx + 22, top + 2, 10, 136 - top);
+    for (let y = top + 14; y < 136; y += 22) { x.fillStyle = '#2a180e'; x.fillRect(cx - 32, y, 64, 3); x.fillStyle = '#9a7050'; for (let k = cx - 28; k < cx + 30; k += 8) x.fillRect(k, y + 1, 2, 1); }
+    // Le hublot où l'on voit le chocolat tourner
+    disque(x, cx, top + 40, 10, '#1a0e08'); disque(x, cx, top + 40, 8, '#4a2410'); disque(x, cx - 2, top + 38, 3, '#8a5a34');
+    x.fillStyle = '#2a180e'; x.fillRect(cx - 4, top - 18, 8, 20); x.fillRect(cx - 4, top - 18, 40, 6);
+  }
+  for (let i = 0; i < 30; i++) { x.fillStyle = r() < 0.5 ? '#ffd890' : '#e8a050'; x.fillRect(r() * 636 | 0, 20 + (r() * 30 | 0), 2, 2); }
+});
+const milieuFabrique = toile(640, H, (x) => {
+  // Le mur de briques chocolat
+  x.fillStyle = '#4a2814'; x.fillRect(0, 64, 640, 78);
+  x.fillStyle = '#3a1e0e'; for (let y = 64; y < 142; y += 8) { x.fillRect(0, y, 640, 1); for (let k = (y / 8) % 2 ? 0 : 12; k < 640; k += 24) x.fillRect(k, y, 1, 8); }
+  x.fillStyle = '#5a3420'; for (let y = 66; y < 142; y += 16) x.fillRect(0, y, 640, 1);
+  // Les grandes affiches « CHOCO »
+  for (const ax of [120, 440]) {
+    x.fillStyle = '#1a0a04'; x.fillRect(ax, 74, 64, 34); x.fillStyle = '#d02828'; x.fillRect(ax + 2, 76, 60, 30);
+    x.drawImage(rendreTexte('CHOCO', '#ffe040', 2, '#3a0808'), ax + 3, 82);
+  }
+  // Le tapis roulant (les tablettes qui défilent dessus sont dessinées à chaque image)
+  x.fillStyle = '#16181c'; x.fillRect(0, 118, 640, 10); x.fillStyle = '#3a3e44'; x.fillRect(0, 118, 640, 2);
+  for (let k = 0; k < 640; k += 16) disque(x, k + 8, 124, 3, '#5a5e66');
+  x.fillStyle = '#24272c'; for (let k = 20; k < 640; k += 80) x.fillRect(k, 128, 6, 14);
+  // Les tuyaux
+  x.fillStyle = '#8a8e96'; x.fillRect(0, 58, 640, 5); x.fillStyle = '#c8ccd4'; x.fillRect(0, 58, 640, 1);
+  for (const px of [60, 300, 520]) { x.fillStyle = '#8a8e96'; x.fillRect(px, 58, 6, 40); x.fillStyle = '#c8ccd4'; x.fillRect(px, 58, 1, 40); x.fillStyle = '#5a5e66'; x.fillRect(px - 2, 94, 10, 4); }
+});
+const procheFabrique = toile(512, H, (x) => {
+  // Le carrelage en damier crème et chocolat
+  for (let y = 142; y < 224; y += 10) for (let k = 0; k < 512; k += 16) {
+    x.fillStyle = ((k / 16 + (y - 142) / 10) % 2) ? '#e8d4b0' : '#7a4a28';
+    x.fillRect(k, y, 16, 10);
+  }
+  x.fillStyle = 'rgba(0,0,0,0.12)'; for (let y = 142; y < 224; y += 10) x.fillRect(0, y, 512, 1);
+  x.fillStyle = '#2a160a'; x.fillRect(0, 142, 512, 3);
+  // Des flaques de chocolat fondu
+  for (const [fx, fy, w] of [[60, 184, 26], [250, 206, 34], [400, 166, 22]]) {
+    x.fillStyle = '#3a1c0a'; x.fillRect(fx, fy, w, 5); x.fillRect(fx + 3, fy - 1, w - 6, 7);
+    x.fillStyle = '#6a3a1a'; x.fillRect(fx + 4, fy + 1, 6, 1);
+  }
+});
+function dessinerFabrique(cam, t) {
+  g.drawImage(cielFabrique, 0, 0);
+  tuilesDecor(loinFabrique, cam, 0.25, 640);
+  // La vapeur des cuves
+  for (const [cx, top] of CUVES) for (let n = -1; n <= 1; n++) {
+    const sx = Math.round(cx + 36 - cam * 0.25 + Math.floor(cam * 0.25 / 640) * 640 + n * 640);
+    if (sx < -40 || sx > L + 40) continue;
+    for (let k = 0; k < 4; k++) {
+      const c = (t * 0.3 + k / 4 + cx * 0.01) % 1;
+      g.globalAlpha = 0.3 * (1 - c);
+      disque(g, sx + Math.round(Math.sin(t + k) * 3), Math.round(top - 18 - c * 40), Math.round(3 + c * 8), '#e8d8c8');
+    }
+  }
+  g.globalAlpha = 1;
+  tuilesDecor(milieuFabrique, cam, 0.5, 640);
+  // Les tablettes qui défilent sur le tapis roulant, et la cascade de chocolat qui tombe des tuyaux
+  const dec = cam * 0.5;
+  for (let k = 0; k < 14; k++) {
+    const sx = Math.round(((k * 46 + t * 30 - dec) % 644 + 644) % 644) - 4;
+    if (sx > L) continue;
+    g.fillStyle = '#2a1206'; g.fillRect(sx - 1, 112, 14, 7); g.fillStyle = '#6a3a1a'; g.fillRect(sx, 113, 12, 5);
+    g.fillStyle = '#8a5a34'; g.fillRect(sx + 1, 113, 3, 2); g.fillRect(sx + 5, 113, 3, 2); g.fillRect(sx + 9, 113, 2, 2);
+  }
+  for (const px of [303, 63]) {
+    const base = ((px - dec) % 640 + 640) % 640;
+    for (const bx of [base, base - 640]) {
+      if (bx < -10 || bx > L + 10) continue;
+      g.fillStyle = '#4a2410'; g.fillRect(bx - 2, 98, 6, 44);
+      g.fillStyle = '#7a4420'; for (let y = 0; y < 44; y += 6) g.fillRect(bx - 1 + (Math.floor(t * 12 + y) % 2), 98 + (y + Math.floor(t * 40)) % 44, 2, 3);
+      disque(g, bx + 1, 142, 6, '#4a2410');
+    }
+  }
+  tuilesDecor(procheFabrique, cam, 1, 512);
+}
+
+// ——— Monde 4 : les toits de la ville, la nuit (pleine lune, gratte-ciel au loin, cheminées, zinc) ———
+const cielToits = toile(L, H, (x) => {
+  const bandes = ['#04061a', '#070a24', '#0a0e2e', '#0e1438', '#141a44', '#1a2250', '#22285a'];
+  bandes.forEach((c, i) => { x.fillStyle = c; x.fillRect(0, i * 20, L, 20); });
+  x.fillStyle = bandes.at(-1); x.fillRect(0, 140, L, 84);
+  const r = alea(52);
+  for (let i = 0; i < 70; i++) { x.fillStyle = r() < 0.2 ? '#fff8d0' : '#9aa0c8'; x.fillRect(r() * L | 0, r() * 110 | 0, 1, 1); }
+  disque(x, 250, 46, 24, '#c8c8a8'); disque(x, 250, 46, 22, '#f0f0d0'); disque(x, 243, 40, 5, '#d8d8b8'); disque(x, 258, 52, 3, '#d8d8b8');
+});
+const loinToits = toile(640, H, (x) => {
+  const r = alea(57);
+  let px = 0;
+  while (px < 620) {
+    const w = 24 + (r() * 40 | 0), h = 40 + (r() * 70 | 0);
+    if (px + w > 640) break;
+    x.fillStyle = '#0a0c1c'; x.fillRect(px, 130 - h, w, h + 12);
+    for (let wy = 136 - h; wy < 130; wy += 6) for (let wx = px + 3; wx < px + w - 3; wx += 5) if (r() < 0.3) { x.fillStyle = r() < 0.7 ? '#e8c860' : '#a0c8ff'; x.fillRect(wx, wy, 2, 3); }
+    if (r() < 0.4) { x.fillStyle = '#0a0c1c'; x.fillRect(px + (w >> 1), 130 - h - 14, 1, 14); }
+    px += w + 2;
+  }
+});
+const CHEMINEES_TOITS = [40, 200, 360, 520]; // dans le calque du milieu
+const milieuToits = toile(640, H, (x) => {
+  // Les toits en pente, en tuiles, et leurs cheminées
+  for (let k = 0; k < 640; k += 160) {
+    x.fillStyle = '#3a2a3a';
+    for (let i = 0; i < 50; i++) x.fillRect(k + i, 142 - i, 160 - i * 2, 1);
+    x.fillStyle = '#4a3446'; for (let y = 96; y < 142; y += 5) x.fillRect(k + (142 - y), y, 160 - (142 - y) * 2, 1);
+  }
+  for (const cx of CHEMINEES_TOITS) {
+    x.fillStyle = '#1a1018'; x.fillRect(cx - 1, 72, 20, 60);
+    x.fillStyle = '#8a3a2a'; x.fillRect(cx, 73, 18, 58); x.fillStyle = '#6a2a1e'; for (let y = 76; y < 130; y += 5) x.fillRect(cx, y, 18, 1);
+    x.fillStyle = '#2a1a20'; x.fillRect(cx - 3, 70, 24, 4);
+  }
+  // Les antennes
+  for (const ax of [110, 290, 470, 600]) { x.fillStyle = '#1a1a26'; x.fillRect(ax, 70, 1, 30); x.fillRect(ax - 8, 76, 17, 1); x.fillRect(ax - 5, 82, 11, 1); }
+});
+const procheToits = toile(512, H, (x) => {
+  // Le zinc du toit plat où l'on court, avec ses joints
+  x.fillStyle = '#4a5468'; x.fillRect(0, 142, 512, 82);
+  x.fillStyle = '#5e6a80'; for (let k = 0; k < 512; k += 32) x.fillRect(k, 142, 2, 82);
+  x.fillStyle = '#3a4254'; for (let k = 16; k < 512; k += 32) x.fillRect(k, 142, 1, 82);
+  x.fillStyle = '#6e7a90'; x.fillRect(0, 142, 512, 2);
+  x.fillStyle = '#2a3040'; x.fillRect(0, 220, 512, 4);
+  for (const [px, py] of [[90, 170], [330, 196], [450, 160]]) { x.fillStyle = '#2a3040'; x.fillRect(px, py, 18, 2); x.fillStyle = '#7a86a0'; x.fillRect(px + 2, py, 4, 1); }
+});
+function dessinerToits(cam, t) {
+  g.drawImage(cielToits, 0, 0);
+  // Des étoiles qui scintillent
+  for (let i = 0; i < 8; i++) if (Math.sin(t * 3 + i * 2.1) > 0.6) etincelle(Math.round(hasard(i + 40) * L), Math.round(hasard(i + 60) * 100), 1, '#ffffff');
+  tuilesDecor(loinToits, cam, 0.2, 640);
+  tuilesDecor(milieuToits, cam, 0.5, 640);
+  // La fumée des cheminées
+  for (const cx of CHEMINEES_TOITS) for (let n = -1; n <= 1; n++) {
+    const sx = Math.round(cx + 9 - cam * 0.5 + Math.floor(cam * 0.5 / 640) * 640 + n * 640);
+    if (sx < -40 || sx > L + 40) continue;
+    for (let k = 0; k < 4; k++) {
+      const c = (t * 0.22 + k / 4 + cx * 0.01) % 1;
+      g.globalAlpha = 0.35 * (1 - c);
+      disque(g, sx + Math.round(c * 22 + Math.sin(t + k) * 3), Math.round(66 - c * 44), Math.round(3 + c * 8), '#8a8aa8');
+    }
+  }
+  g.globalAlpha = 1;
+  tuilesDecor(procheToits, cam, 1, 512);
+}
+
 // ——— Monde 1 : la ville ———
 function dessinerVille(cam, t) {
   g.drawImage(ciel, 0, 0);
@@ -1076,11 +1251,11 @@ function dessinerVille(cam, t) {
 }
 
 // =====================================================================================
-//  Les trois mondes : la ville en chaos, la forêt, le repaire du Général Constipax
+//  Les cinq mondes : la ville en chaos, la forêt, la chocolaterie, les toits, le repaire du Général Constipax
 // =====================================================================================
 const ZMIN = 150, ZMAX = 216; // profondeur où l'on marche (le bas des pieds à l'écran)
 let heros, cam, particules, effets, secousse, score, debutJeu;
-let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT, pigeons, obstacles;
+let ennemis, jauge, pouvoir, vagues, vague, bloque, goT, finT, pigeons, obstacles, tablettes;
 let monde = 1, sauvegarde = null, boss = null, bossFait = false;
 // Les vagues du monde 1 : quand le héros arrive à x, la caméra s'arrête et ces voyous arrivent, un par un,
 // des deux côtés de l'écran. La dernière vague amène le Caïd, le chef de la bande.
@@ -1104,20 +1279,52 @@ const OBSTACLES_MONDE2 = [
   { type: 'tronc', x: 760 }, { type: 'rocher', x: 900, z: 168 }, { type: 'rocher', x: 1290, z: 200 }, { type: 'tronc', x: 1560 },
   { type: 'rocher', x: 2060, z: 182 }, { type: 'tronc', x: 2380 }, { type: 'rocher', x: 2560, z: 160 }, { type: 'rocher', x: 2950, z: 206 }, { type: 'tronc', x: 3150 },
 ];
-// Monde 3 : les soldats du Général, puis le Général lui-même (le combat commence quand le héros arrive à « boss »).
+// Monde 3 : la chocolaterie. Les ouvriers du Général (casque jaune) la gardent ; des caisses à sauter ou contourner.
 const VAGUES_MONDE3 = [
+  { x: 420, ennemis: ['ouvrier', 'ouvrier'] },
+  { x: 1150, ennemis: ['ouvrier', 'ouvrierVif', 'ouvrier'] },
+  { x: 1950, ennemis: ['ouvrierVif', 'ouvrier', 'ouvrierVif', 'ouvrier'] },
+  { x: 2750, ennemis: ['ouvrier', 'ouvrierVif', 'contremaitre', 'ouvrierVif', 'ouvrier'] },
+];
+const OBSTACLES_MONDE3 = [
+  { type: 'caisse', x: 700, z: 170 }, { type: 'caisse', x: 720, z: 200 }, { type: 'caisse', x: 1450, z: 186 }, { type: 'caisse', x: 1700, z: 160 },
+  { type: 'caisse', x: 2280, z: 204 }, { type: 'caisse', x: 2300, z: 174 }, { type: 'caisse', x: 3050, z: 190 },
+];
+// Monde 4 : les toits. Des monte-en-l'air tout en noir, très rapides ; des murets de briques à sauter.
+const VAGUES_MONDE4 = [
+  { x: 400, ennemis: ['monteEnLair', 'monteEnLair'] },
+  { x: 1100, ennemis: ['monteEnLair', 'monteEnLairVif', 'monteEnLair'] },
+  { x: 1850, ennemis: ['monteEnLairVif', 'monteEnLair', 'monteEnLairVif', 'monteEnLair'] },
+  { x: 2650, ennemis: ['monteEnLair', 'monteEnLairVif', 'monteEnLairVif', 'monteEnLair', 'monteEnLairVif'] },
+];
+const OBSTACLES_MONDE4 = [{ type: 'muret', x: 760 }, { type: 'muret', x: 1500 }, { type: 'muret', x: 2250 }, { type: 'muret', x: 3000 }, { type: 'caisse', x: 1300, z: 190 }, { type: 'caisse', x: 2450, z: 166 }];
+// Monde 5 : les soldats du Général, puis le Général lui-même (le combat commence quand le héros arrive à « boss »).
+const VAGUES_MONDE5 = [
   { x: 400, ennemis: ['soldat', 'soldat'] },
   { x: 1050, ennemis: ['soldat', 'soldatVif', 'soldat'] },
   { x: 1700, ennemis: ['soldatVif', 'soldat', 'soldatVif', 'soldat'] },
 ];
-const MONDES = {
-  1: { titre: ['LA VILLE EN CHAOS'], couleurs: ['#ffd0d0', '#ff9090', '#ff6060', '#ff3030', '#e01818', '#b00808', '#900000'], longueur: REGLAGES.LONGUEUR_MONDE, vagues: VAGUES_MONDE1, obstacles: [] },
-  2: { titre: ['LA FORÊT'], couleurs: ['#e0ffd0', '#b8f0a0', '#90e070', '#68c848', '#48a830', '#308820', '#206810'], longueur: 3400, vagues: VAGUES_MONDE2, obstacles: OBSTACLES_MONDE2 },
-  3: { titre: ['LE REPAIRE DU', 'GÉNÉRAL CONSTIPAX'], couleurs: ['#d8ff80', '#b8f060', '#98e040', '#78c830', '#58a820', '#408818', '#306810'], longueur: 2700, vagues: VAGUES_MONDE3, obstacles: [], boss: 2250 },
+// Les tablettes de chocolat de chaque monde : en ramasser remplit la jauge du pouce (trois pour le choco-noisette).
+// x, z : où elle est posée ; h : sa hauteur (0 = par terre ; 24 = sur un rocher ou une caisse ; 60 à 85 : il faut
+// le grand saut) ; grande : la tablette dorée, cachée tout en haut, qui donne le pouvoir d'un coup.
+const TABLETTES = {
+  1: [[240, 190], [520, 172, 62], [880, 205], [1260, 176], [1520, 186, 72], [1880, 160], [2200, 200, 62], [2620, 180], [2960, 168, 84, true]],
+  2: [[300, 182], [760, 186, 44], [900, 168, 24], [1290, 200, 24], [1720, 170, 70], [2060, 182, 24], [2380, 200, 46], [2560, 160, 24], [2950, 206, 24], [3260, 176, 86, true]],
+  3: [[260, 176], [330, 196], [710, 170, 26], [720, 200, 26], [1200, 160, 74], [1450, 186, 26], [1700, 160, 26], [2050, 205, 70], [2290, 189, 26], [2600, 170], [3050, 190, 26], [3180, 170, 86, true]],
+  4: [[250, 180], [760, 170, 48], [1000, 205, 72], [1300, 190, 26], [1500, 200, 48], [1980, 165, 76], [2250, 180, 48], [2450, 166, 26], [2800, 200, 70], [3000, 175, 48], [3300, 185, 88, true]],
+  5: [[300, 186], [760, 170, 66], [1250, 200], [1560, 176, 72], [1960, 188, 86, true]],
 };
+const MONDES = {
+  1: { theme: 'ville', titre: ['LA VILLE EN CHAOS'], couleurs: ['#ffd0d0', '#ff9090', '#ff6060', '#ff3030', '#e01818', '#b00808', '#900000'], longueur: REGLAGES.LONGUEUR_MONDE, vagues: VAGUES_MONDE1, obstacles: [] },
+  2: { theme: 'foret', titre: ['LA FORÊT'], couleurs: ['#e0ffd0', '#b8f0a0', '#90e070', '#68c848', '#48a830', '#308820', '#206810'], longueur: 3400, vagues: VAGUES_MONDE2, obstacles: OBSTACLES_MONDE2 },
+  3: { theme: 'fabrique', titre: ['LA CHOCOLATERIE'], couleurs: ['#fff0d8', '#f0d0a0', '#e0b070', '#c89050', '#a87038', '#885028', '#683818'], longueur: 3300, vagues: VAGUES_MONDE3, obstacles: OBSTACLES_MONDE3 },
+  4: { theme: 'toits', titre: ['LES TOITS DE LA VILLE'], couleurs: ['#e0e8ff', '#c0ccf8', '#a0b0f0', '#8090e0', '#6070c8', '#4858a8', '#344088'], longueur: 3400, vagues: VAGUES_MONDE4, obstacles: OBSTACLES_MONDE4 },
+  5: { theme: 'repaire', titre: ['LE REPAIRE DU', 'GÉNÉRAL CONSTIPAX'], couleurs: ['#d8ff80', '#b8f060', '#98e040', '#78c830', '#58a820', '#408818', '#306810'], longueur: 2700, vagues: VAGUES_MONDE5, obstacles: [], boss: 2250 },
+};
+const DERNIER_MONDE = Math.max(...Object.keys(MONDES).map(Number));
 const longueur = () => MONDES[monde].longueur;
-// « index.html?monde=2 » commence directement au monde 2 (ou 3), pour essayer un monde sans refaire les autres.
-const MONDE_DEPART = Math.min(3, Math.max(1, Number(new URLSearchParams(location.search).get('monde')) || 1));
+// « index.html?monde=2 » commence directement au monde 2 (ou 3, 4, 5), pour essayer un monde sans refaire les autres.
+const MONDE_DEPART = Math.min(DERNIER_MONDE, Math.max(1, Number(new URLSearchParams(location.search).get('monde')) || 1));
 function nouvellePartie() {
   score = 0; jauge = 0; pouvoir = 0;
   heros = { choco: false };
@@ -1135,6 +1342,8 @@ function commencerMonde(n, recommencer = false) {
   cam = 0; particules = []; effets = []; secousse = 0; debutJeu = tJeu;
   ennemis = []; vagues = MONDES[n].vagues.map((v) => ({ ...v, ennemis: [...v.ennemis] })); vague = null; bloque = false; goT = 0; finT = 0;
   obstacles = MONDES[n].obstacles.map((o) => ({ ...o }));
+  tablettes = (TABLETTES[n] ?? []).map(([x, z, h = 0, grande = false]) => ({ x, z, h, grande, prise: false, posee: true }));
+  tablettesPrises = 0; tablettesTotal = tablettes.length;
   boss = null; bossFait = false;
   pigeons = [];
   if (n === 1) for (let x = 170, i = 0; x < longueur() - 80; x += 150 + ((i * 97) % 140), i++) pigeons.push({ x, f: i % 3 ? -1 : 1, salut: 0, fait: false });
@@ -1149,7 +1358,14 @@ const TYPES_ENNEMIS = {
   // Monde 2 : les sbires camouflés, plus rapides ; les « vifs » se retournent très vite (plus dur de les prendre de dos)
   sbire: { vitesse: 50, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.75, portee: 30, preparation: 0.42, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI, buisson: true },
   sbireVif: { vitesse: 56, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.45, portee: 30, preparation: 0.4, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI, buisson: true },
-  // Monde 3 : les soldats du Général
+  // Monde 3 : les ouvriers de la chocolaterie (le contremaître : coriace, comme le Caïd)
+  ouvrier: { vitesse: 44, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.8, portee: 30, preparation: 0.45, recharge: 1.3, degats: () => REGLAGES.DEGATS_ENNEMI },
+  ouvrierVif: { vitesse: 52, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.55, portee: 30, preparation: 0.4, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI },
+  contremaitre: { vitesse: 34, vie: () => REGLAGES.COUPS_POUR_TUER * 2, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 1.1, portee: 32, preparation: 0.55, recharge: 1.5, degats: () => REGLAGES.DEGATS_ENNEMI * 1.5 },
+  // Monde 4 : les monte-en-l'air des toits, très rapides
+  monteEnLair: { vitesse: 58, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.65, portee: 30, preparation: 0.38, recharge: 1.1, degats: () => REGLAGES.DEGATS_ENNEMI },
+  monteEnLairVif: { vitesse: 64, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.45, portee: 30, preparation: 0.36, recharge: 1.0, degats: () => REGLAGES.DEGATS_ENNEMI * 1.1 },
+  // Monde 5 : les soldats du Général
   soldat: { vitesse: 44, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.7, portee: 32, preparation: 0.42, recharge: 1.2, degats: () => REGLAGES.DEGATS_ENNEMI * 1.25 },
   soldatVif: { vitesse: 52, vie: () => REGLAGES.COUPS_POUR_TUER, delaiRetour: () => REGLAGES.DELAI_RETOURNEMENT * 0.5, portee: 32, preparation: 0.38, recharge: 1.1, degats: () => REGLAGES.DEGATS_ENNEMI * 1.25 },
 };
@@ -1169,9 +1385,9 @@ function majPigeons(dt) {
   }
 }
 // Les obstacles de la forêt : un tronc couché en travers du chemin (il faut sauter), un rocher (sauter ou contourner).
-const HAUTEUR_OBSTACLE = { tronc: 14, rocher: 20 };
+const HAUTEUR_OBSTACLE = { tronc: 14, rocher: 20, muret: 16, caisse: 22 };
 function obstacleTouche(o, x, z) {
-  if (o.type === 'tronc') return Math.abs(x - (o.x + (z - ZMIN) * 0.3)) < 9;
+  if (o.type === 'tronc' || o.type === 'muret') return Math.abs(x - (o.x + (z - ZMIN) * 0.3)) < 9;
   return Math.abs(x - o.x) < 15 && Math.abs(z - o.z) < 9;
 }
 function hauteurObstacle(x, z) {
@@ -1193,6 +1409,28 @@ function dessinerTronc(o) {
     const sx = Math.round(o.x + (z - ZMIN) * 0.3 - cam);
     disque(g, sx, z - 7, 8, '#1e1208'); disque(g, sx, z - 7, 7, '#c8a06a'); disque(g, sx, z - 7, 4, '#a07a48'); disque(g, sx, z - 7, 1, '#7a5a30');
   }
+}
+// Un muret de briques en travers du toit (à sauter)
+function dessinerMuret(o) {
+  for (let z = ZMIN; z <= ZMAX; z += 2) {
+    const sx = Math.round(o.x + (z - ZMIN) * 0.3 - cam);
+    g.fillStyle = '#1a0a08'; g.fillRect(sx - 8, z - 16, 16, 16);
+    g.fillStyle = '#8a3a2a'; g.fillRect(sx - 7, z - 15, 14, 14);
+    g.fillStyle = '#a84a36'; g.fillRect(sx - 7, z - 15, 14, 2);
+    g.fillStyle = '#5a2418'; if (z % 4 === 0) { g.fillRect(sx - 7, z - 10, 14, 1); g.fillRect(sx - 7, z - 5, 14, 1); }
+  }
+  g.fillStyle = '#6e6e7a'; g.fillRect(Math.round(o.x - cam) - 9, ZMIN - 18, 18 + Math.round((ZMAX - ZMIN) * 0.3), 3);
+}
+// Une caisse de chocolat (à sauter ou à contourner)
+function dessinerCaisse(o) {
+  const sx = Math.round(o.x - cam);
+  g.fillStyle = 'rgba(10,0,20,0.4)'; g.fillRect(sx - 14, o.z - 2, 28, 4);
+  g.fillStyle = '#1e1008'; g.fillRect(sx - 14, o.z - 24, 28, 24);
+  g.fillStyle = '#a8703a'; g.fillRect(sx - 13, o.z - 23, 26, 22);
+  g.fillStyle = '#c88a4a'; g.fillRect(sx - 13, o.z - 23, 26, 3);
+  g.fillStyle = '#7a4a22'; g.fillRect(sx - 13, o.z - 12, 26, 2); g.fillRect(sx - 2, o.z - 23, 3, 22);
+  g.fillStyle = '#3a1c0a'; g.fillRect(sx - 9, o.z - 19, 6, 4); g.fillRect(sx + 4, o.z - 8, 6, 4);
+  g.fillStyle = '#5a2e12'; g.fillRect(sx - 6, o.z - 21, 12, 7); g.fillStyle = '#c82828'; g.fillRect(sx - 6, o.z - 17, 12, 3);
 }
 function dessinerRocher(o) {
   const sx = Math.round(o.x - cam);
@@ -1505,6 +1743,8 @@ function toucher(e) {
     } else { e.etat = 'ko'; e.t = 0; e.vx = hr.f * 110; e.vh = 150; e.koDir = hr.f; son('ko'); }
     score += 500 * (pouvoir > 0 ? 2 : 1);
     texteFlottant(pouvoir > 0 ? '+1000' : '+500', e.x, e.z, 70, '#ffe040', 0.8);
+    // Le chef de la bande lâche toujours une tablette en tombant, les autres une fois sur quatre
+    if (['caid', 'contremaitre'].includes(e.type) || Math.random() < 0.25) tablettes.push({ x: e.x, z: e.z, h: 30, vh: 160, grande: false, prise: false, posee: true, lachee: true });
     ennemiTue();
   } else { e.etat = 'touche'; e.t = 0.35; }
 }
@@ -1515,12 +1755,54 @@ function ennemiTue() {
     if (pouvoir === 0) jauge = 0;
     return;
   }
-  jauge++;
+  gagnerPouces(1);
+}
+// La jauge se remplit (un voyou K.O., une tablette ramassée) ; pleine, le pouvoir s'active. Pendant le pouvoir, une
+// tablette le fait durer un ennemi de plus.
+function gagnerPouces(n) {
+  if (pouvoir > 0) { pouvoir = Math.min(pouvoir + n, 6); return; }
+  jauge = Math.min(REGLAGES.POUCES_POUR_POUVOIR, jauge + n);
   if (jauge >= REGLAGES.POUCES_POUR_POUVOIR) {
     pouvoir = REGLAGES.POUVOIR_DUREE_ENNEMIS;
     son('pouvoir');
     changerEtat('pouvoirAnim');
   }
+}
+// Les tablettes de chocolat : il suffit de passer dessus (ou de sauter jusqu'à elles). Une tablette = un pouce de la
+// jauge ; la grande tablette dorée remplit la jauge d'un coup. Certains gardes en lâchent une quand ils tombent.
+let tablettesPrises = 0, tablettesTotal = 0;
+function majTablettes(dt) {
+  const hr = heros;
+  for (const o of tablettes) {
+    if (o.prise) continue;
+    if (o.vh !== undefined) { o.h += o.vh * dt; o.vh -= 500 * dt; if (o.h <= 0) { o.h = 0; o.vh = undefined; } }
+    if (Math.abs(hr.x - o.x) < 14 && Math.abs(hr.z - o.z) < 11 && Math.abs(hr.h - o.h) < (o.h > 30 ? 30 : 26)) {
+      o.prise = true;
+      if (!o.lachee) tablettesPrises++;
+      score += o.grande ? 2000 : 200;
+      texteFlottant(o.grande ? 'GRANDE TABLETTE !' : '+1 POUCE', o.x, o.z, o.h + 50, o.grande ? '#ffe040' : '#f0c890', 0.9);
+      son(o.grande ? 'grandeTablette' : 'tablette');
+      for (let i = 0; i < (o.grande ? 16 : 8); i++) particules.push({ x: o.x, z: o.z, h: o.h + 8, vx: (Math.random() * 2 - 1) * 70, vh: 40 + Math.random() * 80, vie: 0.5, max: 0.5, c: i % 2 ? (o.grande ? '#ffe040' : '#e8b878') : '#ffffff', taille: 1 });
+      gagnerPouces(o.grande ? REGLAGES.POUCES_POUR_POUVOIR : 1);
+    }
+  }
+}
+// Une tablette de chocolat qui flotte et brille (la grande : dans son papier doré). (o.x, o.z, o.h) : sa place.
+function dessinerTablette(o, t) {
+  const sx = Math.round(o.x - cam), flotte = Math.round(Math.sin(t * 4 + o.x) * 2);
+  const y = Math.round(o.z - o.h - 14 + flotte);
+  g.fillStyle = 'rgba(10,0,20,0.35)'; g.fillRect(sx - 6, Math.round(o.z - (o.h > 30 ? 0 : o.h)) - 1, 12, 2);
+  const s = o.grande ? 2 : 1;
+  const R = (x, yy, w, h, c) => { g.fillStyle = c; g.fillRect(sx + x * s, y + yy * s, w * s, h * s); };
+  if (o.grande) { g.globalAlpha = 0.3 + Math.sin(t * 6) * 0.15; disque(g, sx, y + 6, 18, '#ffe080'); g.globalAlpha = 1; }
+  R(-7, -1, 14, 11, '#1a0802');
+  R(-6, 0, 12, 9, '#5a2e12');
+  for (const [cx, cy] of [[-5, 1], [-1, 1], [3, 1], [-5, 5], [-1, 5], [3, 5]]) { R(cx, cy, 3, 3, '#7a4420'); R(cx, cy, 2, 1, '#9a6038'); }
+  // Le papier (doré pour la grande, rouge et argent pour les autres), à moitié ouvert
+  R(-6, 5, 12, 4, o.grande ? '#e8b020' : '#c82828'); R(-6, 5, 12, 1, o.grande ? '#fff0a0' : '#f05050');
+  R(-6, 4, 12, 1, o.grande ? '#fff8d0' : '#d8d8e8');
+  const k = Math.floor(t * 8 + o.x) % 6;
+  if (k < 3) etincelle(sx + (o.grande ? 10 : 5), y - 1, [1, 2, 1][k], '#ffffff');
 }
 function blesser(degats, dir) {
   const hr = heros;
@@ -1691,9 +1973,12 @@ function ombre(sx, z, h) {
 // La rue qui vit : bouches d'égout qui fument, barils en feu contre les façades, pigeons sur la corniche.
 function dessinerRue(t) {
   // Forêt : les troncs couchés en travers du chemin (les rochers, eux, se rangent avec les personnages)
-  if (monde === 2) { for (const o of obstacles) if (o.type === 'tronc' && Math.abs(o.x - cam - L / 2) < L) dessinerTronc(o); return; }
+  if (themeMonde() === 'foret') { for (const o of obstacles) if (o.type === 'tronc' && Math.abs(o.x - cam - L / 2) < L) dessinerTronc(o); return; }
+  // Les toits : des murets de briques en travers (à sauter)
+  if (themeMonde() === 'toits') { for (const o of obstacles) if (o.type === 'muret' && Math.abs(o.x - cam - L / 2) < L) dessinerMuret(o); return; }
+  if (themeMonde() === 'fabrique') return;
   // Repaire : des bouches de vapeur verte dans le sol
-  if (monde === 3) {
+  if (themeMonde() === 'repaire') {
     for (let k = 0; k < 6; k++) {
       const vx = 300 + k * 410, sx = Math.round(vx - cam);
       if (sx < -40 || sx > L + 40) continue;
@@ -1739,6 +2024,13 @@ function dessinerRue(t) {
     pigeon(sx, 60, 1, p.f, p.salut > 0);
   }
 }
+// La petite tablette du tableau de bord
+function iconeTablette(x, y) {
+  g.fillStyle = '#1a0802'; g.fillRect(x - 1, y - 1, 12, 9);
+  g.fillStyle = '#5a2e12'; g.fillRect(x, y, 10, 7);
+  g.fillStyle = '#8a5030'; for (const cx of [1, 4, 7]) g.fillRect(x + cx, y + 1, 2, 2);
+  g.fillStyle = '#c82828'; g.fillRect(x, y + 4, 10, 3);
+}
 function dessinerJeu(t) {
   const sx = secousse > 0 ? Math.round((Math.random() * 2 - 1) * 3) : 0, sy = secousse > 0 ? Math.round((Math.random() * 2 - 1) * 2) : 0;
   g.save(); g.translate(sx, sy);
@@ -1773,10 +2065,13 @@ function dessinerJeu(t) {
     g.beginPath(); g.ellipse(Math.round(e.x - cam), Math.round(e.z), r, r * 0.22, 0, 0, Math.PI * 2); g.stroke();
     g.globalAlpha = 1;
   }
-  const rochers = obstacles.filter((o) => o.type === 'rocher' && Math.abs(o.x - cam - L / 2) < L);
-  const acteurs = [...ennemis, hr, ...rochers, ...(boss ? [boss] : [])].sort((a, b) => a.z - b.z);
+  const rochers = obstacles.filter((o) => (o.type === 'rocher' || o.type === 'caisse') && Math.abs(o.x - cam - L / 2) < L);
+  const visibles = tablettes.filter((o) => !o.prise && Math.abs(o.x - cam - L / 2) < L);
+  const acteurs = [...ennemis, hr, ...rochers, ...visibles, ...(boss ? [boss] : [])].sort((a, b) => a.z - b.z + (a.posee ? 0.5 : 0) - (b.posee ? 0.5 : 0));
   for (const a of acteurs) {
-    if (a.type === 'rocher') dessinerRocher(a);
+    if (a.posee) dessinerTablette(a, t);
+    else if (a.type === 'rocher') dessinerRocher(a);
+    else if (a.type === 'caisse') dessinerCaisse(a);
     else if (a === boss) dessinerBoss(t);
     else if (a === hr) {
       if (hr.invT > 0 && hr.vie > 0 && Math.floor(hr.invT * 15) % 2) continue;
@@ -1829,6 +2124,8 @@ function dessinerHUD(t) {
   g.fillStyle = '#fff8c0'; g.fillRect(71, 6, Math.round(62 * v), 1);
   texte(String(score).padStart(6, '0'), 170, 6, '#fff', 1, '#000');
   texte(`MONDE ${monde}`, L - 6, 6, '#ffd040', 1, '#000', 'd');
+  // Les tablettes ramassées dans ce monde
+  if (tablettesTotal) { iconeTablette(222, 5); texte(`${tablettesPrises}/${tablettesTotal}`, 236, 6, tablettesPrises === tablettesTotal ? '#ffe040' : '#f0c890', 1, '#000'); }
   // La barre de vie du Général, en bas de l'écran
   if (boss && boss.etat !== 'entree') {
     g.fillStyle = 'rgba(10, 2, 12, 0.6)'; g.fillRect(40, H - 22, 240, 18);
@@ -2269,6 +2566,36 @@ function artifices(T) {
 }
 const OR = ['#ffffff', '#fff8d0', '#ffe890', '#ffd850', '#ffc830', '#ffb820', '#ffa810'];
 
+// Un gros nuage cotonneux en pixels : trois boules, une ombre dessous, un reflet dessus. (x, y) : son milieu.
+function nuagePixel(x, y, r, sombre = false) {
+  x = Math.round(x); y = Math.round(y); r = Math.round(r);
+  const [ombreC, base, clair] = sombre ? ['#141024', '#2a2442', '#3e3660'] : ['#a098c4', '#e4e0f4', '#ffffff'];
+  for (const [dx, dy, k, c] of [[0, 3, 1, ombreC], [-0.65, 3, 0.72, ombreC], [0.65, 3, 0.66, ombreC]]) disque(g, x + Math.round(dx * r), y + dy + Math.round(r * 0.2), Math.round(r * k), c);
+  disque(g, x - Math.round(r * 0.65), y + Math.round(r * 0.2), Math.round(r * 0.72), base);
+  disque(g, x + Math.round(r * 0.65), y + Math.round(r * 0.25), Math.round(r * 0.66), base);
+  disque(g, x, y, r, base);
+  disque(g, x - Math.round(r * 0.25), y - Math.round(r * 0.3), Math.round(r * 0.45), clair);
+}
+// Un trait épais, pixel par pixel
+function trait(x0, y0, x1, y1, w, c) {
+  const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0)));
+  g.fillStyle = c;
+  for (let k = 0; k <= n; k++) g.fillRect(Math.round(x0 + (x1 - x0) * k / n - w / 2), Math.round(y0 + (y1 - y0) * k / n - w / 2), w, w);
+}
+// Un éclair qui zigzague de (x0, y0) à (x1, y1), avec ses branches ; graine : sa forme (la même tant qu'elle ne change pas).
+function eclairZigzag(x0, y0, x1, y1, graine, epaisseur = 3, branches = true) {
+  const n = 9, pts = [[x0, y0]];
+  const lx = x1 - x0, ly = y1 - y0, lg = Math.hypot(lx, ly), px = -ly / lg, py = lx / lg;
+  for (let i = 1; i < n; i++) { const d = (hasard(graine * 13 + i) - 0.5) * lg * 0.22; pts.push([x0 + lx * i / n + px * d, y0 + ly * i / n + py * d]); }
+  pts.push([x1, y1]);
+  for (const [w, c] of [[epaisseur + 6, 'rgba(120,200,255,0.25)'], [epaisseur + 2, '#9ad8ff'], [epaisseur, '#ffffff']])
+    for (let i = 0; i + 1 < pts.length; i++) trait(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], w, c);
+  if (branches) for (let i = 2; i < n - 1; i += 3) {
+    const [bx, by] = pts[i], a = Math.atan2(ly, lx) + (hasard(graine + i * 7) < 0.5 ? -0.7 : 0.7), r = lg * 0.22;
+    eclairZigzag(bx, by, bx + Math.cos(a) * r, by + Math.sin(a) * r, graine * 3 + i, Math.max(1, epaisseur - 2), false);
+  }
+}
+
 // ——— Les scènes ——— (ts : temps depuis le début de la scène, T : temps du clip)
 const SCENES = {
   // L'intro musicale : un passant en civil marche dans la ville, la nuit (il trébuche un peu, il est maladroit).
@@ -2381,10 +2708,10 @@ const SCENES = {
       g.fillStyle = '#100101';
       for (let x = 0; x < L; x += 2) { const h = 40 + Math.abs(Math.sin(x * 0.045)) * 46 + hasard(Math.floor(x / 10)) * 22; g.fillRect(x, Math.round(200 - h), 2, Math.round(h)); }
       // Les flammes derrière le démon (hautes), puis le démon, puis les flammes de devant (plus claires, à ses pieds)
-      flammes(0, L, 212, 58, T, 1);
+      flammes(0, L, 214, 74, T, 1);
       const peur = ts >= PEUR;
       demon(234, 198, 3, T, peur ? 'peur' : 'fier', peur ? 0.6 : 0);
-      flammes(138, L, 224, 24, T * 1.25 + 4, 1, 7, false);
+      flammes(138, L, 226, 34, T * 1.25 + 4, 1, 7, false);
       // Le rocher où se tient le héros
       g.fillStyle = '#1a0a08'; g.fillRect(0, 200, 140, 24); g.fillStyle = '#2e1410'; g.fillRect(0, 200, 140, 3);
       for (let x = 0; x < 140; x += 14) { g.fillStyle = '#120604'; g.fillRect(x + 5, 206 + (x % 3) * 4, 6, 2); }
@@ -2476,30 +2803,58 @@ const SCENES = {
     } else { ombre(160, 196, 0); dessinerHeros(g, 160, 196, 1, { pose: 'debout', choco: true }, T); }
     texte('FLASH!', 160, 40, OR, 3, '#3a0a00', 'c');
   },
-  // « Quand il atterrit, ça fait un boum dans les nuages »
+  // « Quand il atterrit, ça fait un boum dans les nuages » : la ville est sous une mer de nuages ; il tombe du ciel au
+  // travers, atterrit, et BOUM : tous les nuages sont soufflés dans tous les sens, la ville réapparaît.
   boum(ts, T) {
-    const c = ts % 2.6;
-    const choc = c > 0.45 && c < 0.8;
+    const c = ts % 3.2, CHUTE = 0.5, tb = c - CHUTE;
+    const choc = tb > 0 && tb < 0.4;
     g.save();
-    if (choc) g.translate(Math.round((Math.random() * 2 - 1) * 4), Math.round((Math.random() * 2 - 1) * 3));
+    if (choc) g.translate(Math.round((Math.random() * 2 - 1) * 5), Math.round((Math.random() * 2 - 1) * 4));
     dessinerVille(T * 6, T);
-    if (c < 0.45) {
-      const h = 230 * (1 - c / 0.45) ** 2;
+    // L'onde de choc au sol et l'éclair blanc de l'impact
+    if (tb > 0 && tb < 0.9) {
+      g.strokeStyle = '#ffffff'; g.lineWidth = 2;
+      for (const r0 of [0, 40]) { const r = tb * 340 - r0; if (r > 0) { g.globalAlpha = Math.max(0, 1 - tb / 0.9); g.beginPath(); g.ellipse(160, 196, r, r * 0.3, 0, 0, Math.PI * 2); g.stroke(); } }
+      g.globalAlpha = 1;
+    }
+    // Le héros : il tombe (traits de vitesse), puis atterrit et se relève, pouce levé
+    if (tb < 0) {
+      const h = 260 * (1 - c / CHUTE) ** 2;
+      g.fillStyle = '#ffffff'; for (const dx of [-18, -10, 10, 18]) g.fillRect(160 + dx, Math.round(196 - h - 120), 1, 70);
       ombre(160, 196, h);
       dessinerHeros(g, 160, 196 - h, 1, { pose: 'saut', vh: -1, choco: true }, T);
     } else {
       ombre(160, 196, 0);
-      dessinerHeros(g, 160, 196, 1, { pose: c < 0.65 ? 'atterrit' : 'debout', choco: true }, T);
-      // Le nuage de poussière
-      const k = Math.min(1, (c - 0.45) / 0.9);
+      dessinerHeros(g, 160, 196, 1, { pose: tb < 0.25 ? 'atterrit' : tb < 1 ? 'debout' : 'coup', choco: true }, T);
+      // La poussière qui roule au sol
+      const k = Math.min(1, tb / 0.9);
       g.globalAlpha = Math.max(0, 1 - k);
-      for (let i = 0; i < 9; i++) {
-        const a = (i / 8) * Math.PI, r = 14 + k * 60;
-        disque(g, Math.round(160 + Math.cos(a) * r * 1.4), Math.round(194 - Math.sin(a) * r * 0.5), Math.round(8 + k * 10), i % 2 ? '#e8e0e8' : '#c8c0d0');
-      }
+      for (let i = 0; i < 9; i++) { const a = (i / 8) * Math.PI, r = 14 + k * 70; disque(g, Math.round(160 + Math.cos(a) * r * 1.5), Math.round(194 - Math.sin(a) * r * 0.4), Math.round(7 + k * 9), i % 2 ? '#e8e0e8' : '#c8c0d0'); }
       g.globalAlpha = 1;
-      if (c < 1.6) texte('BOUM!', 160, 70 - Math.min(10, (c - 0.45) * 20), ['#fff8a0', '#fff060', '#ffd030', '#ffb020', '#ff8a10', '#ff6010', '#e04010'], c < 0.52 ? 6 : 5, '#5a0808', 'c');
     }
+    // La mer de nuages : avant l'impact, ils couvrent tout (le héros les traverse en les écartant) ; au BOUM, chaque
+    // nuage est soufflé loin du point d'impact, en tournant, et s'efface.
+    for (let i = 0; i < 46; i++) {
+      const x0 = -24 + hasard(i) * 368 + Math.sin(T * 0.6 + i) * 4, y0 = 6 + hasard(i + 50) * 200, r = 13 + hasard(i + 90) * 15;
+      let x = x0, y = y0, alpha = 1;
+      if (tb < 0) {
+        // Le trou que le héros perce en tombant
+        const hy = 196 - 260 * (1 - c / CHUTE) ** 2;
+        if (y0 < hy + 20 && Math.abs(x0 - 160) < 40) x = x0 + Math.sign(x0 - 160 || 1) * (40 - Math.abs(x0 - 160)) * 1.2;
+      } else {
+        const dx = x0 - 160, dy = (y0 - 196) * 1.3, d = Math.hypot(dx, dy) || 1;
+        const v = 260 + hasard(i + 130) * 240;
+        x = x0 + (dx / d) * v * tb + Math.sin(tb * 9 + i) * 6 * tb;
+        y = y0 + (dy / d) * v * tb - 60 * tb * tb;
+        alpha = Math.max(0, 1 - Math.max(0, tb - 0.35) / 0.9);
+      }
+      if (alpha <= 0 || x < -40 || x > L + 40 || y < -40) continue;
+      g.globalAlpha = alpha;
+      nuagePixel(x, y, r);
+    }
+    g.globalAlpha = 1;
+    if (tb >= 0 && tb < 0.12) { g.fillStyle = `rgba(255,255,255,${1 - tb / 0.12})`; g.fillRect(0, 0, L, H); }
+    if (tb > 0 && tb < 1.4) texte('BOUM!', 160, 66 - Math.min(10, tb * 20), ['#fff8a0', '#fff060', '#ffd030', '#ffb020', '#ff8a10', '#ff6010', '#e04010'], tb < 0.08 ? 7 : 5, '#5a0808', 'c');
     g.restore();
   },
   // « Même les pigeons lui rendent hommage »
@@ -2525,19 +2880,40 @@ const SCENES = {
     herosVolant(150 + Math.sin(T * 0.8) * 14, 126 + Math.sin(T * 2.2) * 6, 2, T);
     logoEn(14);
   },
-  // « Son regard perce les cieux comme un éclair »
+  // « Son regard perce les cieux comme un éclair » : la nuit d'orage ; gros plan sur Choco Pouce, son œil s'allume,
+  // et des éclairs jaillissent de son regard jusqu'aux nuages, qui s'illuminent et se déchirent.
   eclair(ts, T) {
-    const c = ts % 1.5;
-    g.fillStyle = '#140818'; g.fillRect(0, 0, L, H);
-    g.drawImage(loin, Math.round(T * 10) % 320, 0, L, H, 0, 50, L, H);
-    if (c < 0.35) {
-      g.fillStyle = c < 0.1 ? '#ffffff' : '#fff8b0';
-      let x = 60 + hasard(Math.floor(T / 1.5)) * 200, y = 0;
-      while (y < 140) { const nx = x + (hasard(x + y) - 0.5) * 30, ny = y + 12; for (let k = 0; k < 12; k++) g.fillRect(Math.round(x + (nx - x) * k / 12), Math.round(y + k), 3, 1); x = nx; y = ny; }
+    const c = ts % 1.6, pulse = Math.floor(ts / 1.6), CHARGE = 0.28, TIR = 0.8;
+    ['#06040e', '#0a0818', '#100c22', '#16102c', '#1c1436', '#221840'].forEach((col, i) => { g.fillStyle = col; g.fillRect(0, i * 26, L, 26); });
+    g.fillStyle = '#221840'; g.fillRect(0, 156, L, 68);
+    g.drawImage(loin, Math.round(T * 10) % 320, 0, L, H, 0, 60, L, H);
+    // Les nuages d'orage, en haut ; touchés par l'éclair, ils s'illuminent et s'écartent
+    const cibles = [[220 + hasard(pulse) * 80, 24 + hasard(pulse + 3) * 16], [130 + hasard(pulse + 5) * 60, 14 + hasard(pulse + 7) * 12]];
+    const tir = c > CHARGE && c < TIR;
+    for (let i = 0; i < 18; i++) {
+      let x = -20 + i * 21 + Math.sin(T * 0.4 + i) * 6, y = 10 + (i % 3) * 14 + hasard(i + 20) * 10;
+      for (const [cx, cy] of cibles) if (c > CHARGE && Math.abs(x - cx) < 60) x += Math.sign(x - cx || 1) * Math.min(40, (c - CHARGE) * 120) * (1 - Math.abs(x - cx) / 60);
+      nuagePixel(x, y, 18 + hasard(i + 40) * 8, !tir);
     }
-    herosGrand(170, 300, 3, -1, { pose: 'debout', choco: true }, T);
-    if (Math.floor(T * 5) % 2) etincelle(170 - 4 * 3 - 1, 300 - 57 * 3 + 1, 4);
-    if (c < 0.08) { g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(0, 0, L, H); }
+    // Choco Pouce en gros plan ; l'œil qui s'allume
+    herosGrand(100, 288, 3, 1, { pose: 'debout', choco: true }, T);
+    const ox = 113, oy = 121;
+    const charge = c < CHARGE ? c / CHARGE : c < TIR ? 1 : Math.max(0, 1 - (c - TIR) / 0.5);
+    if (charge > 0) {
+      g.globalAlpha = 0.5 * charge; disque(g, ox, oy, Math.round(6 + charge * 10), '#9ad8ff'); g.globalAlpha = 1;
+      disque(g, ox, oy, Math.round(2 + charge * 3), '#ffffff');
+      // Les étincelles qui convergent vers l'œil pendant qu'il se charge
+      if (c < CHARGE) for (let n = 0; n < 6; n++) { const a = n * 1.05 + T * 4, r = 30 * (1 - c / CHARGE) + 6; etincelle(ox + Math.cos(a) * r, oy + Math.sin(a) * r, 1, '#d8f0ff'); }
+    }
+    // Les éclairs qui sortent de son regard
+    if (tir) {
+      cibles.forEach(([cx, cy], k) => eclairZigzag(ox + 3, oy - 1, cx, cy + 12, pulse * 5 + k + Math.floor(c * 14), k ? 2 : 4));
+      for (const [cx, cy] of cibles) { g.globalAlpha = 0.6; disque(g, Math.round(cx), Math.round(cy + 12), 16, '#ffffff'); g.globalAlpha = 1; }
+    }
+    // De petits arcs qui crépitent autour de l'œil après le tir
+    if (c >= TIR && c < TIR + 0.5 && Math.floor(T * 20) % 2) for (let n = 0; n < 3; n++) { const a = hasard(Math.floor(T * 20) + n) * Math.PI * 2; eclairZigzag(ox, oy, ox + Math.cos(a) * 14, oy + Math.sin(a) * 14, Math.floor(T * 20) + n, 1, false); }
+    // Le flash du coup de tonnerre
+    if (c > CHARGE && c < CHARGE + 0.1) { g.fillStyle = `rgba(220,240,255,${0.75 * (1 - (c - CHARGE) / 0.1)})`; g.fillRect(0, 0, L, H); }
   },
   // « Quand il active son pouce mode » : le pouvoir choco-noisette
   pouvoir(ts, T) {
@@ -2771,7 +3147,7 @@ function mettreAJour(dt) {
   } else if (etat === 'jeu') {
     tJeu += dt;
     if (fronts.entree) basculerPause();
-    else { majHeros(dt); majEnnemis(dt); majBoss(dt); majVagues(dt); majPigeons(dt); majParticules(dt); }
+    else { majHeros(dt); majEnnemis(dt); majBoss(dt); majVagues(dt); majPigeons(dt); majTablettes(dt); majParticules(dt); }
   } else if (etat === 'pause') {
     if (fronts.entree) basculerPause();
   } else if (etat === 'pouvoirAnim') {
@@ -2802,7 +3178,7 @@ function mettreAJour(dt) {
     // Fin du monde : le bonus de vie s'ajoute au score, puis le monde suivant
     tJeu += dt;
     majParticules(dt);
-    if (tEtat > 2.6 && finT === 0) { finT = 1; score += heros.vie * 10; son('go'); }
+    if (tEtat > 2.6 && finT === 0) { finT = 1; score += heros.vie * 10 + (tablettesTotal && tablettesPrises === tablettesTotal ? 2000 : 0); son('go'); }
     if (tEtat > 3.2 && (fronts.entree || fronts.coup || fronts.saut)) { son('start'); commencerMonde(monde + 1); changerEtat('monde'); son('monde'); }
   } else if (etat === 'victoire') {
     tJeu += dt;
@@ -2858,8 +3234,10 @@ function dessiner(dt) {
       if (tEtat > 1) {
         texte(`VIE ${heros.vie} × 10`, 175, 100, '#ffffff', 1, '#000');
         texte(`+${finT ? heros.vie * 10 : bonus}`, 300, 100, '#ffe040', 1, '#000', 'd');
-        texte('SCORE', 175, 116, '#ffffff', 1, '#000');
-        texte(String(finT ? score : score + bonus).padStart(6, '0'), 300, 116, '#ffe040', 1, '#000', 'd');
+        texte(`TABLETTES ${tablettesPrises}/${tablettesTotal}`, 175, 112, tablettesPrises === tablettesTotal ? '#ffe040' : '#f0c890', 1, '#000');
+        if (tablettesPrises === tablettesTotal) texte('+2000', 300, 112, '#ffe040', 1, '#000', 'd');
+        texte('SCORE', 175, 126, '#ffffff', 1, '#000');
+        texte(String(finT ? score : score + bonus).padStart(6, '0'), 300, 126, '#ffe040', 1, '#000', 'd');
       }
       if (tEtat > 2.8) { texte('PROCHAIN MONDE :', 220, 146, '#90e870', 1, '#0a2a04', 'c'); MONDES[monde + 1].titre.forEach((l, i) => texte(l, 220, 158 + i * 10, '#90e870', 1, '#0a2a04', 'c')); }
       if (tEtat > 3.2 && Math.floor(tEtat * 2) % 2 === 0) texte('START : CONTINUER', 220, 186, '#fff', 1, '#000', 'c');
